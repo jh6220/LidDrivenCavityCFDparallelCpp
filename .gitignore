@@ -4,3 +4,6 @@ solver.dSYM/
 solver
 final.txt
 ic.txt
+SolverCG.o
+LidDrivenCavity.o
+LidDrivenCavitySolver.o
