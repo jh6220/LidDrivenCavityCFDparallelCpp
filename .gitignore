@@ -1,0 +1,6 @@
+.vscode/
+.DS_Store
+solver.dSYM/
+solver
+final.txt
+ic.txt
