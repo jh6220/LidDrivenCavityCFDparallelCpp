@@ -73,6 +73,10 @@ void LidDrivenCavity::Integrate()
     }
 }
 
+/**
+ * @brief Writes the solution into a file
+ * @param file  name of the file to which the solution is written
+*/
 void LidDrivenCavity::WriteSolution(std::string file)
 {
     double* u0 = new double[Nx*Ny]();

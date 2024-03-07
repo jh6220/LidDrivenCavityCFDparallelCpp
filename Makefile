@@ -20,3 +20,6 @@ SolverCG.o: SolverCG.cpp SolverCG.h
 
 solver: LidDrivenCavitySolver.o LidDrivenCavity.o SolverCG.o
 	$(CXX) -o solver LidDrivenCavitySolver.o LidDrivenCavity.o SolverCG.o $(LIBDIR) $(LIBS)
+
+doc:
+	doxygen Doxyfile

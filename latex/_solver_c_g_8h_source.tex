@@ -1,0 +1,31 @@
+\doxysection{Solver\+CG.\+h}
+\hypertarget{_solver_c_g_8h_source}{}\label{_solver_c_g_8h_source}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00002\ }
+\DoxyCodeLine{00003\ \textcolor{keyword}{class\ }\mbox{\hyperlink{class_solver_c_g}{SolverCG}}}
+\DoxyCodeLine{00004\ \{}
+\DoxyCodeLine{00005\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00006\ \ \ \ \ \mbox{\hyperlink{class_solver_c_g}{SolverCG}}(\textcolor{keywordtype}{int}\ pNx,\ \textcolor{keywordtype}{int}\ pNy,\ \textcolor{keywordtype}{double}\ pdx,\ \textcolor{keywordtype}{double}\ pdy);}
+\DoxyCodeLine{00007\ \ \ \ \ \mbox{\hyperlink{class_solver_c_g}{\string~SolverCG}}();}
+\DoxyCodeLine{00008\ }
+\DoxyCodeLine{00009\ \ \ \ \ \textcolor{keywordtype}{void}\ Solve(\textcolor{keywordtype}{double}*\ b,\ \textcolor{keywordtype}{double}*\ x);}
+\DoxyCodeLine{00010\ }
+\DoxyCodeLine{00011\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00012\ \ \ \ \ \textcolor{keywordtype}{double}\ dx;}
+\DoxyCodeLine{00013\ \ \ \ \ \textcolor{keywordtype}{double}\ dy;}
+\DoxyCodeLine{00014\ \ \ \ \ \textcolor{keywordtype}{int}\ Nx;}
+\DoxyCodeLine{00015\ \ \ \ \ \textcolor{keywordtype}{int}\ Ny;}
+\DoxyCodeLine{00016\ \ \ \ \ \textcolor{keywordtype}{double}*\ r;}
+\DoxyCodeLine{00017\ \ \ \ \ \textcolor{keywordtype}{double}*\ p;}
+\DoxyCodeLine{00018\ \ \ \ \ \textcolor{keywordtype}{double}*\ z;}
+\DoxyCodeLine{00019\ \ \ \ \ \textcolor{keywordtype}{double}*\ t;}
+\DoxyCodeLine{00020\ }
+\DoxyCodeLine{00021\ \ \ \ \ \textcolor{keywordtype}{void}\ ApplyOperator(\textcolor{keywordtype}{double}*\ p,\ \textcolor{keywordtype}{double}*\ t);}
+\DoxyCodeLine{00022\ \ \ \ \ \textcolor{keywordtype}{void}\ Precondition(\textcolor{keywordtype}{double}*\ p,\ \textcolor{keywordtype}{double}*\ t);}
+\DoxyCodeLine{00023\ \ \ \ \ \textcolor{keywordtype}{void}\ ImposeBC(\textcolor{keywordtype}{double}*\ p);}
+\DoxyCodeLine{00024\ }
+\DoxyCodeLine{00025\ \};}
+\DoxyCodeLine{00026\ }
+
+\end{DoxyCode}
