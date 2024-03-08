@@ -21,6 +21,7 @@ public:
     void Integrate();
     void WriteSolution(std::string file);
     void PrintConfiguration();
+    double nu   = 0.1;
 
 private:
     double* v   = nullptr;
@@ -38,7 +39,7 @@ private:
     double Ly   = 1.0;
     double Re   = 10;
     double U    = 1.0;
-    double nu   = 0.1;
+    // double nu   = 0.1;
 
     SolverCG* cg = nullptr;
 

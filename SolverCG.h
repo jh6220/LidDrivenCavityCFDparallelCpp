@@ -18,9 +18,9 @@ private:
     double* z;
     double* t;
 
-    void ApplyOperator(double* p, double* t);
     void Precondition(double* p, double* t);
     void ImposeBC(double* p);
+    void ApplyOperator(double* p, double* t);
 
 };
 

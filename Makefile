@@ -23,3 +23,13 @@ solver: LidDrivenCavitySolver.o LidDrivenCavity.o SolverCG.o
 
 doc:
 	doxygen Doxyfile
+
+lidDrivenCavity-test: lidDrivenCavity-test.cpp LidDrivenCavity.o SolverCG.o
+	$(CXX) $(CXXFLAGS) $(INCDIR) -o lidDrivenCavity-test lidDrivenCavity-test.cpp LidDrivenCavity.o SolverCG.o $(LIBDIR) $(LIBS) -lboost_unit_test_framework
+
+SolverCG-test: SolverCG-test.cpp SolverCG.o
+	$(CXX) $(CXXFLAGS) $(INCDIR) -o SolverCG-test SolverCG-test.cpp SolverCG.o $(LIBDIR) $(LIBS) -lboost_unit_test_framework
+
+run-tests: lidDrivenCavity-test SolverCG-test
+	./lidDrivenCavity-test
+	./SolverCG-test
