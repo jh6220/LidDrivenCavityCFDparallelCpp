@@ -33,3 +33,10 @@ SolverCG-test: SolverCG-test.cpp SolverCG.o
 run-tests: lidDrivenCavity-test SolverCG-test
 	./lidDrivenCavity-test
 	./SolverCG-test
+
+
+solverCG-test-parallel: SolverCG-test.cpp SolverCG.cpp SolverCG.h
+	mpicxx $(INCDIR) -o solverCG-test-parallel SolverCG-test.cpp SolverCG.cpp $(LIBDIR) $(LIBS) -lboost_unit_test_framework -std=c++11
+
+run-testSolver: solverCG-test-parallel
+	mpiexec -n 16 ./solverCG-test-parallel
