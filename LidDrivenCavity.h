@@ -21,6 +21,7 @@ public:
     void Initialise();
     void Integrate();
     void WriteSolution(std::string file);
+    void WriteSolutionParallel(std::string file);
     void PrintConfiguration();
     double nu   = 0.1;
 
@@ -47,9 +48,10 @@ private:
     int    world_rank;
     int    world_size;
     int    world_size_root, mygrid_rank;
-    MPI_Comm mygrid, xCoordsComm, yCoordComm;
+    MPI_Comm mygrid, xCoordComm, yCoordComm;
     int  kx, ky, Nx_local, Ny_local, Npts_local;
     int coords[2];
+    int i_start_global, j_start_global;
     double Lx   = 1.0;
     double Ly   = 1.0;
     double Re   = 10;
@@ -60,6 +62,7 @@ private:
 
     void CleanUp();
     void UpdateDxDy();
-    void Advance();
+    void Advance(int t);
+    void UpdateDataWithParallelProcesses(double* data, int tag);
 };
 

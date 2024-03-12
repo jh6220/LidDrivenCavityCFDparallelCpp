@@ -1,4 +1,5 @@
 #include <iostream>
+#include <sstream>
 #include <iomanip>
 #include <fstream>
 #include <cstring>
@@ -9,20 +10,21 @@ using namespace std;
 #include <mpi.h>
 
 #define IDX(I,J) ((J)*Nx + (I))
+#define IDX_local(I,J) ((J)*Nx_local + (I))
 
 #include "LidDrivenCavity.h"
 #include "SolverCG.h"
 
 LidDrivenCavity::LidDrivenCavity()
 {
-    MPI_Comm_rank(MPI_COMM_WORLD, &world_size);
-    MPI_Comm_size(MPI_COMM_WORLD, &world_rank);
+    MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &world_size);
     
     // Check if the world size is p^2
     world_size_root = sqrt(world_size);
     if (world_size != world_size_root*world_size_root)
     {
-        if world_rank == 0 {
+        if (world_rank == 0) {
             cout << "The number of processes must be a perfect square" << endl;
         }
         MPI_Finalize();
@@ -48,11 +50,11 @@ void LidDrivenCavity::SetGridSize(int nx, int ny)
     this->Ny = ny;
     UpdateDxDy();
 
-    // Define 2D Cartesian topology 
-    // Needs to be commented 
+    // Define 2D Cartesian topology for the MPI processes
     int dims[2] = {world_size_root, world_size_root};
     int periods[2] = {0, 0};
     int reorder = 1;
+
     MPI_Cart_create(MPI_COMM_WORLD, 2, dims, periods, reorder, &mygrid);
 
     int keep[2];
@@ -66,17 +68,50 @@ void LidDrivenCavity::SetGridSize(int nx, int ny)
     keep[1] = 0;
     MPI_Cart_sub(mygrid, keep, &xCoordComm);
 
+
     // Define the grid of the local MPI process
     kx = (Nx-2)%world_size_root;
     Nx_local = (Nx-2-kx)/world_size_root + 2;
+    i_start_global = (Nx_local-2)*coords[0] + min(coords[0], kx); //where the index in the x direction starts of the domain of this process (including the boundary)
     if (coords[0] < kx) {
-            Nx_local = Nx_local + 1;
+        Nx_local = Nx_local + 1;
     }
-    ky = Ny%world_size_root;
+    ky = (Ny-2)%world_size_root;
     Ny_local = (Ny-2-ky)/world_size_root + 2;
+    j_start_global = (Ny_local-2)*coords[1] + min(coords[1], ky); //where the index in the y direction starts of the domain of this process (including the boundary)
     if (coords[1] < ky) {
         Ny_local = Ny_local + 1;
     }
+
+    // // Define 2D Cartesian topology 
+    // // Needs to be commented 
+    // int dims[2] = {world_size_root, world_size_root};
+    // int periods[2] = {0, 0};
+    // int reorder = 1;
+    // MPI_Cart_create(MPI_COMM_WORLD, 2, dims, periods, reorder, &mygrid);
+
+    // int keep[2];
+
+    // MPI_Comm_rank(mygrid, &mygrid_rank);
+    // MPI_Cart_coords(mygrid, mygrid_rank, 2, coords);
+    // keep[0] = 0;
+    // keep[1] = 1; // keep rows in subgrid
+    // MPI_Cart_sub(mygrid, keep, &yCoordComm);
+    // keep[0] = 1; // keep columns in subgrid
+    // keep[1] = 0;
+    // MPI_Cart_sub(mygrid, keep, &xCoordComm);
+
+    // // Define the grid of the local MPI process
+    // kx = (Nx-2)%world_size_root;
+    // Nx_local = (Nx-2-kx)/world_size_root + 2;
+    // if (coords[0] < kx) {
+    //         Nx_local = Nx_local + 1;
+    // }
+    // ky = Ny%world_size_root;
+    // Ny_local = (Ny-2-ky)/world_size_root + 2;
+    // if (coords[1] < ky) {
+    //     Ny_local = Ny_local + 1;
+    // }
 }
 
 void LidDrivenCavity::SetTimeStep(double deltat)
@@ -98,11 +133,12 @@ void LidDrivenCavity::SetReynoldsNumber(double re)
 void LidDrivenCavity::Initialise()
 {
     CleanUp();
-
+    Npts_local = Nx_local * Ny_local;
     v   = new double[Npts_local]();
     s   = new double[Npts_local]();
     tmp = new double[Npts_local]();
     cg  = new SolverCG(Nx_local, Ny_local, dx, dy);
+    cg->SetParallelParams(coords, world_size_root, xCoordComm, yCoordComm, world_rank);
 
     dataB_bottom_sent = new double[Nx_local];
     dataB_top_sent = new double[Nx_local];
@@ -120,9 +156,11 @@ void LidDrivenCavity::Integrate()
     int NSteps = ceil(T/dt);
     for (int t = 0; t < NSteps; ++t)
     {
-        std::cout << "Step: " << setw(8) << t
-                  << "  Time: " << setw(8) << t*dt
-                  << std::endl;
+        if (world_rank == 0) {
+            std::cout << "Step: " << setw(8) << t
+                    << "  Time: " << setw(8) << t*dt
+                    << std::endl;
+        }
         Advance(t);
     }
 }
@@ -164,22 +202,110 @@ void LidDrivenCavity::WriteSolution(std::string file)
     delete[] u1;
 }
 
+/**
+ * @brief Writes the solution into a file
+ * @param file  name of the file to which the solution is written
+*/
+void LidDrivenCavity::WriteSolutionParallel(std::string file)
+{
+    int Nx_write = Nx_local-2;
+    int Ny_write = Ny_local-2;
+    int i_start_write = 1;
+    int i_end_write = Nx_local-2;
+    int j_start_write = 1;
+    int j_end_write = Ny_local-2;
+
+    if (coords[0] == 0) {
+        Nx_write = Nx_write + 1;
+        i_start_write = 0;
+    }
+    if (coords[0] == world_size_root-1) {
+        Nx_write = Nx_write + 1;
+        i_end_write = Nx_local-1;
+    }
+    if (coords[1] == 0) {
+        Ny_write = Ny_write + 1;
+        j_start_write = 0;
+    }
+    if (coords[1] == world_size_root-1) {
+        Ny_write = Ny_write + 1;
+        j_end_write = Ny_local-1;
+    }
+
+    double* u0 = new double[Nx_write*Ny_write]();
+    double* u1 = new double[Nx_write*Ny_write]();
+    for (int i = 1; i < Nx_local - 1; ++i) {
+        for (int j = 1; j < Ny_local - 1; ++j) {
+            u0[IDX_local(i,j)] =  (s[IDX_local(i,j+1)] - s[IDX_local(i,j)]) / dy;
+            u1[IDX_local(i,j)] = -(s[IDX_local(i+1,j)] - s[IDX_local(i,j)]) / dx;
+        }
+    }
+
+    if (coords[1] == world_size_root-1) {    
+        for (int i = 0; i < Nx_local; ++i) {
+            u0[IDX_local(i,Ny_local-1)] = U;
+        }
+    }
+
+    if (world_rank==0) {
+        std::cout << "Writing file " << file << std::endl;
+    }
+    
+    stringstream ss;
+    int k = 0;
+    for (int i = i_start_write ; i < i_end_write+1; ++i)
+    {
+        for (int j = j_start_write; j < j_end_write+1; ++j)
+        {
+            k = IDX_local(i, j);
+            ss << (i + i_start_global) * dx << " " << (j + j_start_global) * dy 
+                << " " << v[k] <<  " " << s[k] 
+                << " " << u0[k] << " " << u1[k] << endl;
+        }
+        // ss << std::endl;
+    }
+
+    string data = ss.str();
+    int size = data.size();
+    int all_sizes[world_size];
+    MPI_Allgather(&size, 1, MPI_INT, all_sizes, 1, MPI_INT, MPI_COMM_WORLD);
+
+    MPI_Offset offset = 0;
+    for (int i = 0; i < world_rank; ++i) {
+        offset += all_sizes[i];
+    }
+
+    MPI_File fh;
+    MPI_File_open(MPI_COMM_WORLD, file.c_str(), MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
+
+    // Write the data
+    MPI_File_write_at_all(fh, offset, data.c_str(), size, MPI_CHAR, MPI_STATUS_IGNORE);
+
+    // Close the file
+    MPI_File_close(&fh);
+
+    delete[] u0;
+    delete[] u1;
+}
+
 
 void LidDrivenCavity::PrintConfiguration()
 {
-    cout << "Grid size: " << Nx << " x " << Ny << endl;
-    cout << "Spacing:   " << dx << " x " << dy << endl;
-    cout << "Length:    " << Lx << " x " << Ly << endl;
-    cout << "Grid pts:  " << Npts << endl;
-    cout << "Timestep:  " << dt << endl;
-    cout << "Steps:     " << ceil(T/dt) << endl;
-    cout << "Reynolds number: " << Re << endl;
-    cout << "Linear solver: preconditioned conjugate gradient" << endl;
-    cout << endl;
-    if (nu * dt / dx / dy > 0.25) {
-        cout << "ERROR: Time-step restriction not satisfied!" << endl;
-        cout << "Maximum time-step is " << 0.25 * dx * dy / nu << endl;
-        exit(-1);
+    if (world_rank == 0) {        
+        cout << "Grid size: " << Nx << " x " << Ny << endl;
+        cout << "Spacing:   " << dx << " x " << dy << endl;
+        cout << "Length:    " << Lx << " x " << Ly << endl;
+        cout << "Grid pts:  " << Npts << endl;
+        cout << "Timestep:  " << dt << endl;
+        cout << "Steps:     " << ceil(T/dt) << endl;
+        cout << "Reynolds number: " << Re << endl;
+        cout << "Linear solver: preconditioned conjugate gradient" << endl;
+        cout << endl;
+        if (nu * dt / dx / dy > 0.25) {
+            cout << "ERROR: Time-step restriction not satisfied!" << endl;
+            cout << "Maximum time-step is " << 0.25 * dx * dy / nu << endl;
+            exit(-1);
+        }
     }
 }
 
@@ -191,6 +317,15 @@ void LidDrivenCavity::CleanUp()
         delete[] s;
         delete[] tmp;
         delete cg;
+
+        delete[] dataB_bottom_sent;
+        delete[] dataB_top_sent;
+        delete[] dataB_left_sent;
+        delete[] dataB_right_sent;
+        delete[] dataB_bottom_recv;
+        delete[] dataB_top_recv;
+        delete[] dataB_left_recv;
+        delete[] dataB_right_recv;
     }
 }
 
@@ -205,59 +340,60 @@ void LidDrivenCavity::UpdateDxDy()
 
 void LidDrivenCavity::UpdateDataWithParallelProcesses(double* data, int tag) {
 
+    MPI_Request request_left, request_right, request_top, request_bottom;
     // Collect boundary data to buffers and sent to neighbours
     if (coords[0] != 0) {
         // left
-        for (int i = 0; i < Ny_local; ++i) {
-            dataB_left_sent[i] = data[IDX(1, i)];
+        for (int j = 0; j < Ny_local; ++j) {
+            dataB_left_sent[j] = data[IDX_local(1, j)];
         }
-        MPI_Isent(dataB_left_sent, Ny_local, MPI_DOUBLE, coords[0]-1, tag, xCoordComm, MPI_STATUS_IGNORE);
+        MPI_Isend(dataB_left_sent, Ny_local, MPI_DOUBLE, coords[0]-1, tag, xCoordComm, &request_left);
     }
     if (coords[0] != world_size_root-1) {
         // right
-        for (int i = 0; i < Ny_local; ++i) {
-            dataB_right_sent[i] = data[IDX(Nx_local-2, j)];
+        for (int j = 0; j < Ny_local; ++j) {
+            dataB_right_sent[j] = data[IDX_local(Nx_local-2, j)];
         }
-        MPI_Isent(dataB_right_sent, Ny_local, MPI_DOUBLE, coords[0]+1, tag, xCoordComm, MPI_STATUS_IGNORE);
+        MPI_Isend(dataB_right_sent, Ny_local, MPI_DOUBLE, coords[0]+1, tag, xCoordComm, &request_right);
     }
     if (coords[1] != 0) {
         // top
-        for (int j = 0; j < Nx_local; ++j) {
-            dataB_top_sent[j] = data[IDX(j,1)];
+        for (int i = 0; i < Nx_local; ++i) {
+            dataB_top_sent[i] = data[IDX_local(i,1)];
         }
-        MPI_Isent(dataB_top_sent, Nx_local, MPI_DOUBLE, coords[1]-1, tag, yCoordComm, MPI_STATUS_IGNORE);
+        MPI_Isend(dataB_top_sent, Nx_local, MPI_DOUBLE, coords[1]-1, tag, yCoordComm, &request_top);
     }
     if (coords[1] != world_size_root-1) {
         // bottom
-        for (int j = 0; j < Nx_local; ++j) {
-            dataB_bottom_sent[j] = data[IDX(j, Ny_local-2)];
+        for (int i = 0; i < Nx_local; ++i) {
+            dataB_bottom_sent[i] = data[IDX_local(i, Ny_local-2)];
         }
-        MPI_Isent(dataB_bottom_sent, Nx_local, MPI_DOUBLE, coords[1]+1, tag, yCoordComm, MPI_STATUS_IGNORE);
+        MPI_Isend(dataB_bottom_sent, Nx_local, MPI_DOUBLE, coords[1]+1, tag, yCoordComm, &request_bottom);
     }
 
     // Receive boundary data from neighbours
     if (coords[0] != 0) {
         MPI_Recv(dataB_left_recv, Ny_local, MPI_DOUBLE, coords[0]-1, tag, xCoordComm, MPI_STATUS_IGNORE);
-        for (int i = 0; i < Ny_local; ++i) {
-            data[IDX(0,i)] = dataB_left_recv[i];
+        for (int j = 0; j < Ny_local; ++j) {
+            data[IDX_local(0,j)] = dataB_left_recv[j];
         }
     }
     if (coords[0] != world_size_root-1) {
         MPI_Recv(dataB_right_recv, Ny_local, MPI_DOUBLE, coords[0]+1, tag, xCoordComm, MPI_STATUS_IGNORE);
-        for (int i = 0; i < Ny_local; ++i) {
-            data[IDX(Nx_local-1,i)] = dataB_right_recv[i];
+        for (int j = 0; j < Ny_local; ++j) {
+            data[IDX_local(Nx_local-1,j)] = dataB_right_recv[j];
         }
     }
     if (coords[1] != 0) {
         MPI_Recv(dataB_top_recv, Nx_local, MPI_DOUBLE, coords[1]-1, tag, yCoordComm, MPI_STATUS_IGNORE);
-        for (int j = 0; j < Nx_local; ++j) {
-            data[IDX(j,0)] = dataB_top_recv[j];
+        for (int i = 0; i < Nx_local; ++i) {
+            data[IDX_local(i,0)] = dataB_top_recv[i];
         }
     }
     if (coords[1] != world_size_root-1) {
         MPI_Recv(dataB_bottom_recv, Nx_local, MPI_DOUBLE, coords[1]+1, tag, yCoordComm, MPI_STATUS_IGNORE);
-        for (int j = 0; j < Nx_local; ++j) {
-            data[IDX(j,Ny_local-1)] = dataB_bottom_recv[j];
+        for (int i = 0; i < Nx_local; ++i) {
+            data[IDX_local(i,Ny_local-1)] = dataB_bottom_recv[i];
         }
     }
 }
@@ -270,79 +406,86 @@ void LidDrivenCavity::Advance(int idxT)
     double dx2i = 1.0/dx/dx;
     double dy2i = 1.0/dy/dy;
 
-    int n_tags = 4;
+    int n_tags = 3;
     
     // Vorticity boundary conditions
     if (coords[0] == 0) {
-        for (int i = 1; i < Ny_local-1; ++i) {
+        for (int j = 1; j < Ny_local-1; ++j) {
             // left
-            v[IDX(0,j)]    = 2.0 * dx2i * (s[IDX(0,j)]    - s[IDX(1,j)]);
+            v[IDX_local(0,j)]    = 2.0 * dx2i * (s[IDX_local(0,j)]    - s[IDX_local(1,j)]);
         }
     }
 
     if (coords[0] == world_size_root-1) {
-        for (int i = 1; i < Ny_local-1; ++i) {
+        for (int j = 1; j < Ny_local-1; ++j) {
             // right
-            v[IDX(Nx_local-1,j)] = 2.0 * dx2i * (s[IDX(Nx_local-1,j)] - s[IDX(Nx_local-2,j)]);
+            v[IDX_local(Nx_local-1,j)] = 2.0 * dx2i * (s[IDX_local(Nx_local-1,j)] - s[IDX_local(Nx_local-2,j)]);
         }
     }
 
     if (coords[1] == 0) {
-        for (int j = 1; j < Nx_local-1; ++j) {
+        for (int i = 1; i < Nx_local-1; ++i) {
             // top
-            v[IDX(i,0)]    = 2.0 * dy2i * (s[IDX(i,0)]    - s[IDX(i,1)]);
+            v[IDX_local(i,0)]    = 2.0 * dy2i * (s[IDX_local(i,0)]    - s[IDX_local(i,1)]);
         }
     }
 
     if (coords[1] == world_size_root-1) {
-        for (int j = 1; j < Nx_local-1; ++j) {
+        for (int i = 1; i < Nx_local-1; ++i) {
             // bottom
-            v[IDX(i,Ny_local-1)] = 2.0 * dy2i * (s[IDX(i,Ny_local-1)] - s[IDX(i,Ny_local-2)])
+            v[IDX_local(i,Ny_local-1)] = 2.0 * dy2i * (s[IDX_local(i,Ny_local-1)] - s[IDX_local(i,Ny_local-2)])
                            - 2.0 * dyi*U;
-        }
-    }
-
-    // Compute interior vorticity
-    for (int i = 1; i < Nx - 1; ++i) {
-        for (int j = 1; j < Ny - 1; ++j) {
-            v[IDX(i,j)] = dx2i*(
-                    2.0 * s[IDX(i,j)] - s[IDX(i+1,j)] - s[IDX(i-1,j)])
-                        + 1.0/dy/dy*(
-                    2.0 * s[IDX(i,j)] - s[IDX(i,j+1)] - s[IDX(i,j-1)]);
         }
     }
 
     //Exchange vorticity data with parallel processes
     UpdateDataWithParallelProcesses(v, n_tags*idxT+0);
 
-    // Time advance vorticity
-    for (int i = 1; i < Nx - 1; ++i) {
-        for (int j = 1; j < Ny - 1; ++j) {
-            v[IDX(i,j)] = v[IDX(i,j)] + dt*(
-                ( (s[IDX(i+1,j)] - s[IDX(i-1,j)]) * 0.5 * dxi
-                 *(v[IDX(i,j+1)] - v[IDX(i,j-1)]) * 0.5 * dyi)
-              - ( (s[IDX(i,j+1)] - s[IDX(i,j-1)]) * 0.5 * dyi
-                 *(v[IDX(i+1,j)] - v[IDX(i-1,j)]) * 0.5 * dxi)
-              + nu * (v[IDX(i+1,j)] - 2.0 * v[IDX(i,j)] + v[IDX(i-1,j)])*dx2i
-              + nu * (v[IDX(i,j+1)] - 2.0 * v[IDX(i,j)] + v[IDX(i,j-1)])*dy2i);
+    // Compute interior vorticity
+    for (int i = 1; i < Nx_local - 1; ++i) {
+        for (int j = 1; j < Ny_local - 1; ++j) {
+            v[IDX_local(i,j)] = dx2i*(
+                    2.0 * s[IDX_local(i,j)] - s[IDX_local(i+1,j)] - s[IDX_local(i-1,j)])
+                        + 1.0/dy/dy*(
+                    2.0 * s[IDX_local(i,j)] - s[IDX_local(i,j+1)] - s[IDX_local(i,j-1)]);
         }
     }
-    
 
-    // Sinusoidal test case with analytical solution, which can be used to test
-    // the Poisson solver
-    /*
-    const int k = 3;
-    const int l = 3;
-    for (int i = 0; i < Nx; ++i) {
-        for (int j = 0; j < Ny; ++j) {
-            v[IDX(i,j)] = -M_PI * M_PI * (k * k + l * l)
-                                       * sin(M_PI * k * i * dx)
-                                       * sin(M_PI * l * j * dy);
+    //Exchange vorticity data with parallel processes
+    UpdateDataWithParallelProcesses(v, n_tags*idxT+1);
+
+    // Time advance vorticity
+    for (int i = 1; i < Nx_local - 1; ++i) {
+        for (int j = 1; j < Ny_local - 1; ++j) {
+            v[IDX_local(i,j)] = v[IDX_local(i,j)] + dt*(
+                ( (s[IDX_local(i+1,j)] - s[IDX_local(i-1,j)]) * 0.5 * dxi
+                 *(v[IDX_local(i,j+1)] - v[IDX_local(i,j-1)]) * 0.5 * dyi)
+              - ( (s[IDX_local(i,j+1)] - s[IDX_local(i,j-1)]) * 0.5 * dyi
+                 *(v[IDX_local(i+1,j)] - v[IDX_local(i-1,j)]) * 0.5 * dxi)
+              + nu * (v[IDX_local(i+1,j)] - 2.0 * v[IDX_local(i,j)] + v[IDX_local(i-1,j)])*dx2i
+              + nu * (v[IDX_local(i,j+1)] - 2.0 * v[IDX_local(i,j)] + v[IDX_local(i,j-1)])*dy2i);
         }
     }
-    */
+
+    // cout << "before solve on rank " << world_rank << endl;
 
     // Solve Poisson problem
-    cg->Solve(v, s);
+    cg->SolveParallel(v, s);
+
+    // if (world_rank != 0) {
+    //     int token;
+    //     MPI_Recv(&token, 1, MPI_INT, world_rank - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    // }
+    // cout << "Rank: " << world_rank << " Nx_local " << Nx_local << " Ny_local " << Ny_local
+    //  << " Xcoord " << coords[0] << " Ycoord " << coords[1]
+    //  << " Npts_local " << Npts_local << " v " << v[IDX_local(Nx_local-1, Ny_local-2)] << "," << v[IDX_local(Nx_local-2, Ny_local-1)] << endl;
+    // if (world_rank != world_size - 1) {
+    //     int token = 0;
+    //     MPI_Send(&token, 1, MPI_INT, world_rank + 1, 0, MPI_COMM_WORLD);
+    // }
+
+    // MPI_Barrier(MPI_COMM_WORLD);
+
+    //Exchange vorticity data with parallel processes
+    UpdateDataWithParallelProcesses(s, n_tags*idxT+2);
 }

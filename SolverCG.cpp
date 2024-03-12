@@ -189,7 +189,8 @@ void SolverCG::SolveParallel(double* b, double* x) {
 
 
 
-    // UpdateDataWithParallelProcesses(p, 0);
+    UpdateDataWithParallelProcesses(p, 0);
+
     ApplyOperator(x, t);
     cblas_dcopy(n, b, 1, r, 1);        // r_0 = b (i.e. b)
     ImposeBCParallel(r);
@@ -199,11 +200,9 @@ void SolverCG::SolveParallel(double* b, double* x) {
     cblas_dcopy(n, z, 1, p, 1);        // p_0 = r_0
 
     k = 0;
-    int k_max = 5;
+    int k_max = 5000;
     do {
         k++;
-
-        MPI_Barrier(MPI_COMM_WORLD);
         UpdateDataWithParallelProcesses(p, k+1);
         ApplyOperator(p, t);
 
@@ -221,41 +220,10 @@ void SolverCG::SolveParallel(double* b, double* x) {
         cblas_daxpy(n,  alpha_global, p, 1, x, 1);  // x_{k+1} = x_k + alpha_k p_k
         cblas_daxpy(n, -alpha_global, t, 1, r, 1); // r_{k+1} = r_k - alpha_k A p_k
 
-        // if (world_rank==0 || world_rank==1) {
-        //     cout << "Nx_local: " << Nx << " Ny_local: " << Ny  << endl;
-        //     PrintMatrix(Ny, Nx, x);
-        // }
-
-        // if (world_rank != 0) {
-        //     // If not the first process, receive a token from the previous process
-        //     int token;
-        //     MPI_Recv(&token, 1, MPI_INT, world_rank - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        // }
-
-        // cout << "Process " << world_rank << " is printing its matrix." << endl;
-        // PrintMatrix(Ny, Nx, r);
-
-        // if (world_rank != world_size - 1) {
-        //     // If not the last process, send a token to the next process
-        //     int token = 0; // The value of the token doesn't matter in this case
-        //     MPI_Send(&token, 1, MPI_INT, world_rank + 1, 0, MPI_COMM_WORLD);
-        // }
-
-        // eps = cblas_dnrm2(n, r, 1);
-        // eps = 0;
-        // for (int j=1; j<Ny-1; j++) {
-        //     eps += cblas_ddot(Nx-2, r+j*Nx+1, 1, r+j*Nx+1, 1);
-        // }
-        // // eps = eps*eps;
-        // MPI_Barrier(MPI_COMM_WORLD);
-        // MPI_Allreduce(&eps, &eps_global, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-        // eps_global = sqrt(eps_global);
-        // eps = sqrt(eps);
-        // if (world_rank == 0) {
-        //     cout << "eps_global = " << eps_global << " eps = " << eps << endl;
-        // }
-
         eps_global = CalculateEpsGlobalParallel(r);
+        // if (world_rank==0) {
+        //     cout << "eps_global = " << eps_global << endl;}
+
         if (eps_global < tol*tol) {
             if (world_rank == 0) {
                 cout << "Converged in " << k << " iterations. eps = " << eps_global << endl;

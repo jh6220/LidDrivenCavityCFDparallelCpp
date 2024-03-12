@@ -72,8 +72,7 @@ BOOST_AUTO_TEST_CASE(Solve2) {
     for (int i = 0; i < Nx*Ny; i++) 
     {
         BOOST_CHECK_SMALL(s[i]-s_true[i], tol);
-    }
-    
+    }   
 }
 
 
