@@ -27,6 +27,7 @@ public:
 
 private:
     double* v   = nullptr;
+    double* vnew = nullptr;
     double* s   = nullptr;
     double* tmp = nullptr;
     double* dataB_left_sent = nullptr;

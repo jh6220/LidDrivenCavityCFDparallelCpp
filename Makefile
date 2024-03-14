@@ -1,5 +1,5 @@
 CXX=mpicxx
-CXXFLAGS=-std=c++11 -Wall -O3
+CXXFLAGS= -std=c++11 -Wall -O3 -fopenmp
 # Include directories
 INCDIR=-I/opt/homebrew/Cellar/openblas/0.3.26/include -I/opt/homebrew/Cellar/boost/1.84.0_1/include
 # Library directories
@@ -36,7 +36,6 @@ SolverCG-test: SolverCG-test.cpp SolverCG.o
 run-tests: lidDrivenCavity-test SolverCG-test
 	./lidDrivenCavity-test
 	./SolverCG-test
-
 
 solverCG-test-parallel: SolverCG-test.cpp SolverCG.cpp SolverCG.h
 	mpicxx $(INCDIR) -o solverCG-test-parallel SolverCG-test.cpp SolverCG.cpp $(LIBDIR) $(LIBS) -lboost_unit_test_framework -std=c++11

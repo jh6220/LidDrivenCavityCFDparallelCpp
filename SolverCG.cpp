@@ -5,6 +5,7 @@ using namespace std;
 
 #include <cblas.h>
 #include <mpi.h>
+#include <omp.h>
 
 #include "SolverCG.h"
 
@@ -160,10 +161,6 @@ double SolverCG::CalculateEpsGlobalParallel(double* r) {
     }
     MPI_Allreduce(&eps, &eps_global, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     eps_global = sqrt(eps_global);
-    // eps = sqrt(eps);
-    // if (world_rank == 0) {
-    //     cout << "eps_global = " << eps_global << " eps = " << eps << endl;
-    // }
     return eps_global;
 }
 

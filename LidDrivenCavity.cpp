@@ -8,6 +8,7 @@ using namespace std;
 
 #include <cblas.h>
 #include <mpi.h>
+#include <omp.h>
 
 #define IDX(I,J) ((J)*Nx + (I))
 #define IDX_local(I,J) ((J)*Nx_local + (I))
@@ -82,36 +83,6 @@ void LidDrivenCavity::SetGridSize(int nx, int ny)
     if (coords[1] < ky) {
         Ny_local = Ny_local + 1;
     }
-
-    // // Define 2D Cartesian topology 
-    // // Needs to be commented 
-    // int dims[2] = {world_size_root, world_size_root};
-    // int periods[2] = {0, 0};
-    // int reorder = 1;
-    // MPI_Cart_create(MPI_COMM_WORLD, 2, dims, periods, reorder, &mygrid);
-
-    // int keep[2];
-
-    // MPI_Comm_rank(mygrid, &mygrid_rank);
-    // MPI_Cart_coords(mygrid, mygrid_rank, 2, coords);
-    // keep[0] = 0;
-    // keep[1] = 1; // keep rows in subgrid
-    // MPI_Cart_sub(mygrid, keep, &yCoordComm);
-    // keep[0] = 1; // keep columns in subgrid
-    // keep[1] = 0;
-    // MPI_Cart_sub(mygrid, keep, &xCoordComm);
-
-    // // Define the grid of the local MPI process
-    // kx = (Nx-2)%world_size_root;
-    // Nx_local = (Nx-2-kx)/world_size_root + 2;
-    // if (coords[0] < kx) {
-    //         Nx_local = Nx_local + 1;
-    // }
-    // ky = Ny%world_size_root;
-    // Ny_local = (Ny-2-ky)/world_size_root + 2;
-    // if (coords[1] < ky) {
-    //     Ny_local = Ny_local + 1;
-    // }
 }
 
 void LidDrivenCavity::SetTimeStep(double deltat)
@@ -135,6 +106,7 @@ void LidDrivenCavity::Initialise()
     CleanUp();
     Npts_local = Nx_local * Ny_local;
     v   = new double[Npts_local]();
+    vnew= new double[Npts_local]();
     s   = new double[Npts_local]();
     tmp = new double[Npts_local]();
     cg  = new SolverCG(Nx_local, Ny_local, dx, dy);
@@ -314,6 +286,7 @@ void LidDrivenCavity::CleanUp()
 {
     if (v) {
         delete[] v;
+        delete[] vnew;
         delete[] s;
         delete[] tmp;
         delete cg;
@@ -457,7 +430,8 @@ void LidDrivenCavity::Advance(int idxT)
     // Time advance vorticity
     for (int i = 1; i < Nx_local - 1; ++i) {
         for (int j = 1; j < Ny_local - 1; ++j) {
-            v[IDX_local(i,j)] = v[IDX_local(i,j)] + dt*(
+            // v[IDX_local(i,j)] = v[IDX_local(i,j)] + dt*(
+            vnew[IDX_local(i,j)] = v[IDX_local(i,j)] + dt*(
                 ( (s[IDX_local(i+1,j)] - s[IDX_local(i-1,j)]) * 0.5 * dxi
                  *(v[IDX_local(i,j+1)] - v[IDX_local(i,j-1)]) * 0.5 * dyi)
               - ( (s[IDX_local(i,j+1)] - s[IDX_local(i,j-1)]) * 0.5 * dyi
@@ -467,25 +441,8 @@ void LidDrivenCavity::Advance(int idxT)
         }
     }
 
-    // cout << "before solve on rank " << world_rank << endl;
-
     // Solve Poisson problem
-    cg->SolveParallel(v, s);
+    cg->SolveParallel(vnew, s);
 
-    // if (world_rank != 0) {
-    //     int token;
-    //     MPI_Recv(&token, 1, MPI_INT, world_rank - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    // }
-    // cout << "Rank: " << world_rank << " Nx_local " << Nx_local << " Ny_local " << Ny_local
-    //  << " Xcoord " << coords[0] << " Ycoord " << coords[1]
-    //  << " Npts_local " << Npts_local << " v " << v[IDX_local(Nx_local-1, Ny_local-2)] << "," << v[IDX_local(Nx_local-2, Ny_local-1)] << endl;
-    // if (world_rank != world_size - 1) {
-    //     int token = 0;
-    //     MPI_Send(&token, 1, MPI_INT, world_rank + 1, 0, MPI_COMM_WORLD);
-    // }
-
-    // MPI_Barrier(MPI_COMM_WORLD);
-
-    //Exchange vorticity data with parallel processes
     UpdateDataWithParallelProcesses(s, n_tags*idxT+2);
 }

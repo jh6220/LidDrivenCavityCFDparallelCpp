@@ -134,10 +134,6 @@ BOOST_AUTO_TEST_CASE(SolveParallel) {
         Ny_local = Ny_local + 1;
     }
 
-    // cout << "Rank: " << world_rank << " xCoord: " << coords[0] << " yCoord: " << coords[1] << " Nx_local: " << Nx_local << " Ny_local: " << Ny_local << " i_start_global: " << i_start_global << " j_start_global " << j_start_global << endl;
-
-    // MPI_Barrier(MPI_COMM_WORLD);
-
     int Npts_local = Nx_local*Ny_local;
     double* v = new double[Npts_local]();
     double* s = new double[Npts_local]();
@@ -155,23 +151,6 @@ BOOST_AUTO_TEST_CASE(SolveParallel) {
             s_true[j*Nx_local+i] = -sin(M_PI * k * (i+i_start_global) * dx) * sin(M_PI * l * (j+j_start_global) * dy);
         }
     }
-
-    // if (world_rank != 0) {
-    //     // If not the first process, receive a token from the previous process
-    //     int token;
-    //     MPI_Recv(&token, 1, MPI_INT, world_rank - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    // }
-
-    // // Perform the print operation
-    // cout << "Process " << world_rank << " is printing its matrix." << endl;
-    // cout << "Nx_local: " << Nx_local << " Ny_local: " << Ny_local << " i_start_global: " << i_start_global << " j_start_global " << j_start_global << endl;
-    // PrintMatrix(Ny_local, Nx_local, s_true);
-
-    // if (world_rank != world_size - 1) {
-    //     // If not the last process, send a token to the next process
-    //     int token = 0; // The value of the token doesn't matter in this case
-    //     MPI_Send(&token, 1, MPI_INT, world_rank + 1, 0, MPI_COMM_WORLD);
-    // }
 
 
     SolverCG* cg  = new SolverCG(Nx_local, Ny_local, dx, dy);

@@ -1,5 +1,6 @@
 #include <iostream>
 #include <mpi.h>
+#include <omp.h>
 using namespace std;
 
 #include <boost/program_options.hpp>
@@ -10,7 +11,6 @@ namespace po = boost::program_options;
 int main(int argc, char **argv)
 {
     MPI_Init(&argc, &argv);
-
 
     po::options_description opts(
         "Solver for the 2D lid-driven cavity incompressible flow problem");
