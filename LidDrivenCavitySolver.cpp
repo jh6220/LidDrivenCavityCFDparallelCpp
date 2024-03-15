@@ -1,6 +1,6 @@
 #include <iostream>
 #include <mpi.h>
-#include <omp.h>
+// #include <omp.h>
 using namespace std;
 
 #include <boost/program_options.hpp>

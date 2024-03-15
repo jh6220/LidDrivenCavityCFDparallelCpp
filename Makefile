@@ -1,5 +1,5 @@
 CXX=mpicxx
-CXXFLAGS= -std=c++11 -Wall -O3 -fopenmp
+CXXFLAGS= -std=c++11 -Wall -O3 #-fopenmp
 # Include directories
 INCDIR=-I/opt/homebrew/Cellar/openblas/0.3.26/include -I/opt/homebrew/Cellar/boost/1.84.0_1/include
 # Library directories
@@ -24,6 +24,10 @@ solver: LidDrivenCavitySolver.o LidDrivenCavity.o SolverCG.o
 run: solver
 	mpiexec -n 9 ./solver --Lx 1 --Ly 1 --Nx 201 --Ny 201 --Re 1000 --dt 0.005 --T 5
 
+runOMP: solver
+	export OMP_NUM_THREADS=4
+	mpiexec -n 1 ./solver --Lx 1 --Ly 1 --Nx 201 --Ny 201 --Re 1000 --dt 0.005 --T 5
+
 doc:
 	doxygen Doxyfile
 
@@ -42,3 +46,8 @@ solverCG-test-parallel: SolverCG-test.cpp SolverCG.cpp SolverCG.h
 
 run-testSolver: solverCG-test-parallel
 	mpiexec -n 4 ./solverCG-test-parallel
+
+.PHONY: clean, run, runOMP, doc, run-tests, run-testSolver
+
+clean:
+	-rm -f *.o solver lidDrivenCavity-test SolverCG-test solverCG-test-parallel

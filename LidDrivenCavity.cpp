@@ -12,6 +12,7 @@ using namespace std;
 
 #define IDX(I,J) ((J)*Nx + (I))
 #define IDX_local(I,J) ((J)*Nx_local + (I))
+#define IDX_write(I,J) ((J)*Nx_write + (I))
 
 #include "LidDrivenCavity.h"
 #include "SolverCG.h"
@@ -137,42 +138,101 @@ void LidDrivenCavity::Integrate()
     }
 }
 
-/**
- * @brief Writes the solution into a file
- * @param file  name of the file to which the solution is written
-*/
-void LidDrivenCavity::WriteSolution(std::string file)
-{
-    double* u0 = new double[Nx*Ny]();
-    double* u1 = new double[Nx*Ny]();
-    for (int i = 1; i < Nx - 1; ++i) {
-        for (int j = 1; j < Ny - 1; ++j) {
-            u0[IDX(i,j)] =  (s[IDX(i,j+1)] - s[IDX(i,j)]) / dy;
-            u1[IDX(i,j)] = -(s[IDX(i+1,j)] - s[IDX(i,j)]) / dx;
-        }
-    }
-    for (int i = 0; i < Nx; ++i) {
-        u0[IDX(i,Ny-1)] = U;
-    }
+// /**
+//  * @brief Writes the solution into a file
+//  * @param file  name of the file to which the solution is written
+// */
+// void LidDrivenCavity::WriteSolution(std::string file)
+// {
+//     int Nx_write = Nx_local-2;
+//     int Ny_write = Ny_local-2;
+//     int i_start_write = 1;
+//     int i_end_write = Nx_local-2;
+//     int j_start_write = 1;
+//     int j_end_write = Ny_local-2;
 
-    std::ofstream f(file.c_str());
-    std::cout << "Writing file " << file << std::endl;
-    int k = 0;
-    for (int i = 0; i < Nx; ++i)
-    {
-        for (int j = 0; j < Ny; ++j)
-        {
-            k = IDX(i, j);
-            f << i * dx << " " << j * dy << " " << v[k] <<  " " << s[k] 
-              << " " << u0[k] << " " << u1[k] << std::endl;
-        }
-        f << std::endl;
-    }
-    f.close();
+//     if (coords[0] == 0) {
+//         Nx_write = Nx_write + 1;
+//         i_start_write = 0;
+//     }
+//     if (coords[0] == world_size_root-1) {
+//         Nx_write = Nx_write + 1;
+//         i_end_write = Nx_local-1;
+//     }
+//     if (coords[1] == 0) {
+//         Ny_write = Ny_write + 1;
+//         j_start_write = 0;
+//     }
+//     if (coords[1] == world_size_root-1) {
+//         Ny_write = Ny_write + 1;
+//         j_end_write = Ny_local-1;
+//     }
 
-    delete[] u0;
-    delete[] u1;
-}
+//     double* u0_write = new double[Nx_write*Ny_write]();
+//     double* u1_write = new double[Nx_write*Ny_write]();
+//     double* s_write = new double[Nx_write*Ny_write]();
+//     double* v_write = new double[Nx_write*Ny_write]();
+//     double* x_write = new double[Nx_write*Ny_write]();
+//     double* y_write = new double[Nx_write*Ny_write]();
+//     int i2,j2;
+//     // double* x_local = new double[]
+//     for (int i = 1; i < Nx_local-1; ++i) {
+//         i2 = i-i_start_write;
+//         for (int j = 1; j < Nx_local-1; ++j) {
+//             j2 = j-j_start_write;
+//             u0_write[IDX_write(i2,j2)] =  (s[IDX_local(i,j+1)] - s[IDX_local(i,j)]) / dy;
+//             u1_write[IDX_write(i2,j2)] = -(s[IDX_local(i+1,j)] - s[IDX_local(i,j)]) / dx;
+//         }
+//     }
+
+//     if (coords[1] == world_size_root-1) {   
+//         int JN = (Ny_write-1)*Nx_write;
+//         for (int i = 0; i < Nx_write; ++i) {
+//             u0[JN+i] = U;
+//         }
+//     }
+
+//     for (int i = 0; i < Nx_write; ++i) {
+//         i2 = i+i_start_write;
+//         ig = i2+i_start_global;
+//         for (int j = 0; j < Ny_write; ++j) {
+//             j2 = j+j_start_write;
+//             s_write[IDX_write(i,j)] = s[IDX_local(i2,j2)];
+//             v_write[IDX_write(i,j)] = v[IDX_local(i2,j2)];
+//             x_write[IDX_write(i,j)] = (ig) * dx;
+//             y_write[IDX_write(i,j)] = (j2+j_start_write) * dy;
+//         }
+//     }
+
+//     double* u0_global, *u1_global, *s_global, *v_global, *x_global, *y_global;
+//     if (world_rank == 0) {
+//         u0_global = new double[Nx*Ny]();
+//         u1_global = new double[Nx*Ny]();
+//         s_global = new double[Nx*Ny]();
+//         v_global = new double[Nx*Ny]();
+//         x_global = new double[Nx*Ny]();
+//         y_global = new double[Nx*Ny]();
+//     }
+//     MPI_Gather()
+
+//     std::ofstream f(file.c_str());
+//     std::cout << "Writing file " << file << std::endl;
+//     int k = 0;
+//     for (int i = 0; i < Nx_local; ++i)
+//     {
+//         for (int j = 0; j < Ny_local; ++j)
+//         {
+//             k = IDX_local(i, j);
+//             f << i * dx << " " << j * dy << " " << v[k] <<  " " << s[k] 
+//               << " " << u0[k] << " " << u1[k] << std::endl;
+//         }
+//         f << std::endl;
+//     }
+//     f.close();
+
+//     delete[] u0;
+//     delete[] u1;
+// }
 
 /**
  * @brief Writes the solution into a file
@@ -204,8 +264,8 @@ void LidDrivenCavity::WriteSolutionParallel(std::string file)
         j_end_write = Ny_local-1;
     }
 
-    double* u0 = new double[Nx_write*Ny_write]();
-    double* u1 = new double[Nx_write*Ny_write]();
+    double* u0 = new double[Npts_local]();
+    double* u1 = new double[Npts_local]();
     for (int i = 1; i < Nx_local - 1; ++i) {
         for (int j = 1; j < Ny_local - 1; ++j) {
             u0[IDX_local(i,j)] =  (s[IDX_local(i,j+1)] - s[IDX_local(i,j)]) / dy;
@@ -378,45 +438,87 @@ void LidDrivenCavity::Advance(int idxT)
     double dyi  = 1.0/dy;
     double dx2i = 1.0/dx/dx;
     double dy2i = 1.0/dy/dy;
+    int i, j;
 
     int n_tags = 3;
     
     // Vorticity boundary conditions
-    if (coords[0] == 0) {
-        for (int j = 1; j < Ny_local-1; ++j) {
-            // left
-            v[IDX_local(0,j)]    = 2.0 * dx2i * (s[IDX_local(0,j)]    - s[IDX_local(1,j)]);
+    #pragma omp parallel
+    {
+        #pragma omp single
+        {
+            if (coords[0] == 0) {
+                #pragma omp task
+                for (j = 1; j < Ny_local-1; ++j) {
+                    // left
+                    v[IDX_local(0,j)]    = 2.0 * dx2i * (s[IDX_local(0,j)]    - s[IDX_local(1,j)]);
+                }
+            }
+
+            if (coords[0] == world_size_root-1) {
+                #pragma omp task
+                for (j = 1; j < Ny_local-1; ++j) {
+                    // right
+                    v[IDX_local(Nx_local-1,j)] = 2.0 * dx2i * (s[IDX_local(Nx_local-1,j)] - s[IDX_local(Nx_local-2,j)]);
+                }
+            }
+
+            if (coords[1] == 0) {
+                #pragma omp task
+                for (i = 1; i < Nx_local-1; ++i) {
+                    // top
+                    v[IDX_local(i,0)]    = 2.0 * dy2i * (s[IDX_local(i,0)]    - s[IDX_local(i,1)]);
+                }
+            }
+
+            if (coords[1] == world_size_root-1) {
+                #pragma omp task
+                for (i = 1; i < Nx_local-1; ++i) {
+                    // bottom
+                    v[IDX_local(i,Ny_local-1)] = 2.0 * dy2i * (s[IDX_local(i,Ny_local-1)] - s[IDX_local(i,Ny_local-2)])
+                                - 2.0 * dyi*U;
+                }
+            }
         }
+        #pragma omp taskwait // Ensure all tasks are completed
     }
 
-    if (coords[0] == world_size_root-1) {
-        for (int j = 1; j < Ny_local-1; ++j) {
-            // right
-            v[IDX_local(Nx_local-1,j)] = 2.0 * dx2i * (s[IDX_local(Nx_local-1,j)] - s[IDX_local(Nx_local-2,j)]);
-        }
-    }
+    // if (coords[0] == 0) {
+    //     for (j = 1; j < Ny_local-1; ++j) {
+    //         // left
+    //         v[IDX_local(0,j)]    = 2.0 * dx2i * (s[IDX_local(0,j)]    - s[IDX_local(1,j)]);
+    //     }
+    // }
 
-    if (coords[1] == 0) {
-        for (int i = 1; i < Nx_local-1; ++i) {
-            // top
-            v[IDX_local(i,0)]    = 2.0 * dy2i * (s[IDX_local(i,0)]    - s[IDX_local(i,1)]);
-        }
-    }
+    // if (coords[0] == world_size_root-1) {
+    //     for (j = 1; j < Ny_local-1; ++j) {
+    //         // right
+    //         v[IDX_local(Nx_local-1,j)] = 2.0 * dx2i * (s[IDX_local(Nx_local-1,j)] - s[IDX_local(Nx_local-2,j)]);
+    //     }
+    // }
 
-    if (coords[1] == world_size_root-1) {
-        for (int i = 1; i < Nx_local-1; ++i) {
-            // bottom
-            v[IDX_local(i,Ny_local-1)] = 2.0 * dy2i * (s[IDX_local(i,Ny_local-1)] - s[IDX_local(i,Ny_local-2)])
-                           - 2.0 * dyi*U;
-        }
-    }
+    // if (coords[1] == 0) {
+    //     for (i = 1; i < Nx_local-1; ++i) {
+    //         // top
+    //         v[IDX_local(i,0)]    = 2.0 * dy2i * (s[IDX_local(i,0)]    - s[IDX_local(i,1)]);
+    //     }
+    // }
+
+    // if (coords[1] == world_size_root-1) {
+    //     for (i = 1; i < Nx_local-1; ++i) {
+    //         // bottom
+    //         v[IDX_local(i,Ny_local-1)] = 2.0 * dy2i * (s[IDX_local(i,Ny_local-1)] - s[IDX_local(i,Ny_local-2)])
+    //                        - 2.0 * dyi*U;
+    //     }
+    // }
 
     //Exchange vorticity data with parallel processes
     UpdateDataWithParallelProcesses(v, n_tags*idxT+0);
 
     // Compute interior vorticity
-    for (int i = 1; i < Nx_local - 1; ++i) {
-        for (int j = 1; j < Ny_local - 1; ++j) {
+    #pragma omp parallel for collapse(2) default(shared) private(i,j) schedule (static)
+    for (i = 1; i < Nx_local - 1; ++i) {
+        for (j = 1; j < Ny_local - 1; ++j) {
             v[IDX_local(i,j)] = dx2i*(
                     2.0 * s[IDX_local(i,j)] - s[IDX_local(i+1,j)] - s[IDX_local(i-1,j)])
                         + 1.0/dy/dy*(
@@ -428,9 +530,9 @@ void LidDrivenCavity::Advance(int idxT)
     UpdateDataWithParallelProcesses(v, n_tags*idxT+1);
 
     // Time advance vorticity
-    for (int i = 1; i < Nx_local - 1; ++i) {
-        for (int j = 1; j < Ny_local - 1; ++j) {
-            // v[IDX_local(i,j)] = v[IDX_local(i,j)] + dt*(
+    #pragma omp parallel for collapse(2) default(shared) private(i,j) schedule (static)
+    for (i = 1; i < Nx_local - 1; ++i) {
+        for (j = 1; j < Ny_local - 1; ++j) {
             vnew[IDX_local(i,j)] = v[IDX_local(i,j)] + dt*(
                 ( (s[IDX_local(i+1,j)] - s[IDX_local(i-1,j)]) * 0.5 * dxi
                  *(v[IDX_local(i,j+1)] - v[IDX_local(i,j-1)]) * 0.5 * dyi)

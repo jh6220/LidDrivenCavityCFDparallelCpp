@@ -54,33 +54,75 @@ void SolverCG::SetParallelParams(int* pcoords, int pworld_size_root, MPI_Comm px
     dataB_bottom_recv = new double[Nx];
 }
 
+// void SolverCG::ImposeBCParallel(double* inout) {
+
+//     if (coords[0] == 0) {
+//         for (int j = 0; j < Ny; ++j) {
+//             // left
+//             inout[IDX(0,j)]    = 0.0;
+//         }
+//     }
+
+//     if (coords[0] == world_size_root-1) {
+//         for (int j = 0; j < Ny; ++j) {
+//             // right
+//             inout[IDX(Nx-1,j)] = 0.0;        }
+//     }
+
+//     if (coords[1] == 0) {
+//         for (int i = 0; i < Nx; ++i) {
+//             // top
+//             inout[IDX(i,0)]    = 0.0;
+//         }
+//     }
+
+//     if (coords[1] == world_size_root-1) {
+//         for (int i = 0; i < Nx; ++i) {
+//             // bottom
+//             inout[IDX(i,Ny-1)] = 0.0;
+//         }
+//     }
+
+// }
+
 void SolverCG::ImposeBCParallel(double* inout) {
 
-    if (coords[0] == 0) {
-        for (int j = 0; j < Ny; ++j) {
-            // left
-            inout[IDX(0,j)]    = 0.0;
-        }
-    }
+    #pragma omp parallel
+    {
+        #pragma omp single
+        {    
+            if (coords[0] == 0) {
+                #pragma omp task
+                for (int j = 0; j < Ny; ++j) {
+                    // left
+                    inout[IDX(0,j)]    = 0.0;
+                }
+            }
 
-    if (coords[0] == world_size_root-1) {
-        for (int j = 0; j < Ny; ++j) {
-            // right
-            inout[IDX(Nx-1,j)] = 0.0;        }
-    }
+            if (coords[0] == world_size_root-1) {
+                #pragma omp task
+                for (int j = 0; j < Ny; ++j) {
+                    // right
+                    inout[IDX(Nx-1,j)] = 0.0;        }
+            }
 
-    if (coords[1] == 0) {
-        for (int i = 0; i < Nx; ++i) {
-            // top
-            inout[IDX(i,0)]    = 0.0;
-        }
-    }
+            if (coords[1] == 0) {
+                #pragma omp task
+                for (int i = 0; i < Nx; ++i) {
+                    // top
+                    inout[IDX(i,0)]    = 0.0;
+                }
+            }
 
-    if (coords[1] == world_size_root-1) {
-        for (int i = 0; i < Nx; ++i) {
-            // bottom
-            inout[IDX(i,Ny-1)] = 0.0;
+            if (coords[1] == world_size_root-1) {
+                #pragma omp task
+                for (int i = 0; i < Nx; ++i) {
+                    // bottom
+                    inout[IDX(i,Ny-1)] = 0.0;
+                }
+            }
         }
+        #pragma omp taskwait // Ensure all tasks are completed
     }
 
 }
@@ -156,7 +198,10 @@ void SolverCG::PrintMatrix(int Ny, int Nx, double* M) {
 
 double SolverCG::CalculateEpsGlobalParallel(double* r) {
     eps = 0;
-    for (int j=1; j<Ny-1; j++) {
+    int j = 0;
+
+    #pragma omp parallel for default(shared) private(j) reduction(+:eps) schedule(static)
+    for (j=1; j<Ny-1; j++) {
         eps += cblas_ddot(Nx-2, r+j*Nx+1, 1, r+j*Nx+1, 1);
     }
     MPI_Allreduce(&eps, &eps_global, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -171,7 +216,7 @@ void SolverCG::PreconditionParallel(double* in, double* out, double factor) {
 
 
 void SolverCG::SolveParallel(double* b, double* x) {
-    int k;
+    int k,i;
     double alpha_num, alpha_den, alpha_num_global, alpha_den_global, alpha_global;
     double beta, beta_global;
     double tol = 0.001;
@@ -205,6 +250,7 @@ void SolverCG::SolveParallel(double* b, double* x) {
 
         alpha_num = 0;
         alpha_den = 0;
+        #pragma omp parallel for default(shared) private(i) reduction(+:alpha_num, alpha_den) schedule(static)
         for (int i=1; i<Ny-1; i++) {
             alpha_num += cblas_ddot(Nx-2, p+i*Nx+1, 1, t+i*Nx+1, 1);
             alpha_den += cblas_ddot(Nx-2, t+i*Nx+1, 1, p+i*Nx+1, 1);
@@ -230,7 +276,8 @@ void SolverCG::SolveParallel(double* b, double* x) {
 
         PreconditionParallel(r, z, factor);
         beta = 0;
-        for (int i=1; i<Ny-1; i++) {
+        #pragma omp parallel for default(shared) private(i) reduction(+:beta) schedule(static)
+        for (i=1; i<Ny-1; i++) {
             beta += cblas_ddot(Nx-2, r+i*Nx+1, 1, z+i*Nx+1, 1);
         }
 
@@ -309,14 +356,36 @@ void SolverCG::Solve(double* b, double* x) {
     cout << "Converged in " << k << " iterations. eps = " << eps << endl;
 }
 
+// void SolverCG::ApplyOperator(double* in, double* out) {
+//     // Assume ordered with y-direction fastest (column-by-column)
+//     double dx2i = 1.0/dx/dx;
+//     double dy2i = 1.0/dy/dy;
+//     int jm1 = 0, jp1 = 2;
+
+//     for (int j = 1; j < Ny - 1; ++j) {
+//         for (int i = 1; i < Nx - 1; ++i) {
+//             out[IDX(i,j)] = ( -     in[IDX(i-1, j)]
+//                               + 2.0*in[IDX(i,   j)]
+//                               -     in[IDX(i+1, j)])*dx2i
+//                           + ( -     in[IDX(i, jm1)]
+//                               + 2.0*in[IDX(i,   j)]
+//                               -     in[IDX(i, jp1)])*dy2i;
+//         }
+//         jm1++;
+//         jp1++;
+//     }
 
 void SolverCG::ApplyOperator(double* in, double* out) {
     // Assume ordered with y-direction fastest (column-by-column)
     double dx2i = 1.0/dx/dx;
     double dy2i = 1.0/dy/dy;
     int jm1 = 0, jp1 = 2;
-    for (int j = 1; j < Ny - 1; ++j) {
-        for (int i = 1; i < Nx - 1; ++i) {
+    int i,j;
+    #pragma omp parallel for default(shared) private(i,j,jm1,jp1) schedule(static)
+    for (j = 1; j < Ny - 1; ++j) {
+        jm1 = j-1;
+        jp1 = j+1;
+        for (i = 1; i < Nx - 1; ++i) {
             out[IDX(i,j)] = ( -     in[IDX(i-1, j)]
                               + 2.0*in[IDX(i,   j)]
                               -     in[IDX(i+1, j)])*dx2i
@@ -324,8 +393,6 @@ void SolverCG::ApplyOperator(double* in, double* out) {
                               + 2.0*in[IDX(i,   j)]
                               -     in[IDX(i, jp1)])*dy2i;
         }
-        jm1++;
-        jp1++;
     }
 }
 
