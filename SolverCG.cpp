@@ -242,9 +242,15 @@ void SolverCG::SolveParallel(double* b, double* x) {
     cblas_dcopy(n, b, 1, r, 1);        // r_0 = b (i.e. b)
     ImposeBCParallel(r);
 
-    cblas_daxpy(n, -1.0, t, 1, r, 1);
-    PreconditionParallel(r, z, factor);
-    cblas_dcopy(n, z, 1, p, 1);        // p_0 = r_0
+    // cblas_daxpy(n, -1.0, t, 1, r, 1);
+    // PreconditionParallel(r, z, factor);
+    // cblas_dcopy(n, z, 1, p, 1);        // p_0 = r_0
+    #pragma omp parallel for default(shared) private(i) schedule(static)
+    for (i=0;i<Nx*Ny;i++) {
+        r[i] -= t[i];
+        z[i] = r[i]*factor;
+        p[i] = z[i];
+    }
 
     k = 0;
     int k_max = 5000;
@@ -256,7 +262,7 @@ void SolverCG::SolveParallel(double* b, double* x) {
         alpha_num = 0;
         alpha_den = 0;
         #pragma omp parallel for default(shared) private(i) reduction(+:alpha_num, alpha_den) schedule(static)
-        for (int i=1; i<Ny-1; i++) {
+        for (i=1; i<Ny-1; i++) {
             alpha_num += cblas_ddot(Nx-2, p+i*Nx+1, 1, t+i*Nx+1, 1);
             alpha_den += cblas_ddot(Nx-2, t+i*Nx+1, 1, p+i*Nx+1, 1);
         }
@@ -265,8 +271,14 @@ void SolverCG::SolveParallel(double* b, double* x) {
         MPI_Allreduce(&alpha_den, &alpha_den_global, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         alpha_global = alpha_num_global/alpha_den_global;
 
-        cblas_daxpy(n,  alpha_global, p, 1, x, 1);  // x_{k+1} = x_k + alpha_k p_k
-        cblas_daxpy(n, -alpha_global, t, 1, r, 1); // r_{k+1} = r_k - alpha_k A p_k
+        // cblas_daxpy(n,  alpha_global, p, 1, x, 1);  // x_{k+1} = x_k + alpha_k p_k
+        // cblas_daxpy(n, -alpha_global, t, 1, r, 1); // r_{k+1} = r_k - alpha_k A p_k
+        #pragma omp parallel for default(shared) private(i) schedule(static)
+        for (i=0;i<Nx*Ny;i++) {
+            x[i] += alpha_global*p[i];
+            r[i] -= alpha_global*t[i];
+            z[i] = r[i]*factor; //Precodntion.B.alternative1
+        }
 
         eps_global = CalculateEpsGlobalParallel(r);
         // if (world_rank==0) {
@@ -279,19 +291,32 @@ void SolverCG::SolveParallel(double* b, double* x) {
             break;
         }
 
-        PreconditionParallel(r, z, factor);
+        // PreconditionParallel(r, z, factor); //Precodntion.B.orig
         beta = 0;
         #pragma omp parallel for default(shared) private(i) reduction(+:beta) schedule(static)
         for (i=1; i<Ny-1; i++) {
             beta += cblas_ddot(Nx-2, r+i*Nx+1, 1, z+i*Nx+1, 1);
+            // cblas_dcopy(Nx-2, r+i*Nx+1, 1, z+i*Nx+1, 1); //Precodntion.B.alternative1
+            // cblas_dscal(Nx-2, factor, z+i*Nx+1, 1);
         }
 
         MPI_Allreduce(&beta, &beta_global, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         beta_global = beta_global/alpha_den_global;
 
-        cblas_dcopy(n, z, 1, t, 1);
-        cblas_daxpy(n, beta_global, p, 1, t, 1);
-        cblas_dcopy(n, t, 1, p, 1);
+        // cblas_dcopy(n, z, 1, t, 1);
+        // cblas_daxpy(n, beta_global, p, 1, t, 1);
+        // cblas_dcopy(n, t, 1, p, 1);
+        #pragma omp parallel for default(shared) private(i) schedule(static)
+        for (i=0; i<Nx*Ny; i++) {
+            t[i]=z[i] + beta_global*p[i];
+            p[i]=t[i];
+        }
+        // for (i=1; i<Ny-1; i++) {
+        //     cblas_dcopy(Nx-2, z+i*Nx+1, 1, t+i*Nx+1, 1);
+        //     cblas_daxpy(Nx-2, beta_global, p+i*Nx+1, 1, t+i*Nx+1, 1);
+        //     cblas_dcopy(Nx-2, t+i*Nx+1, 1, p+i*Nx+1, 1);
+        // }
+        
 
     } while (k < k_max); // Set a maximum number of iterations
 

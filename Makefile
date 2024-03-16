@@ -1,30 +1,30 @@
 CXX=mpicxx
-CXXFLAGS= -std=c++11 -Wall -O3
+CXXFLAGS= -std=c++11 -Wall -O3 -g
 # Include directories
 INCDIR=-I/opt/homebrew/Cellar/openblas/0.3.26/include -I/opt/homebrew/Cellar/boost/1.84.0_1/include
 # Library directories
 LIBDIR=-L/opt/homebrew/Cellar/openblas/0.3.26/lib -L/opt/homebrew/Cellar/boost/1.84.0_1/lib
 # Libraries to link against
-LIBS=-lblas -llapack -lcblas -lboost_program_options
+LIBS=-lblas -llapack  -lboost_program_options
 
 default: solver
 
 .PHONY: clean, run, runOMP, doc, run-tests, run-testSolver
 
 LidDrivenCavitySolver.o: LidDrivenCavitySolver.cpp
-	$(CXX) $(CXXFLAGS) $(INCDIR) -o LidDrivenCavitySolver.o -c LidDrivenCavitySolver.cpp 
+	$(CXX) $(CXXFLAGS) $(INCDIR) -fopenmp -o LidDrivenCavitySolver.o -c LidDrivenCavitySolver.cpp 
 
 LidDrivenCavity.o: LidDrivenCavity.cpp LidDrivenCavity.h
-	$(CXX) $(CXXFLAGS) $(INCDIR) -o LidDrivenCavity.o -c LidDrivenCavity.cpp
+	$(CXX) $(CXXFLAGS) $(INCDIR) -fopenmp -o LidDrivenCavity.o -c LidDrivenCavity.cpp
 
 SolverCG.o: SolverCG.cpp SolverCG.h
-	$(CXX) $(CXXFLAGS) $(INCDIR) -o SolverCG.o -c SolverCG.cpp
+	$(CXX) $(CXXFLAGS) $(INCDIR) -fopenmp -o SolverCG.o -c SolverCG.cpp
 
 solver: LidDrivenCavitySolver.o LidDrivenCavity.o SolverCG.o
-	$(CXX) -o solver LidDrivenCavitySolver.o LidDrivenCavity.o SolverCG.o $(LIBDIR) $(LIBS)
+	$(CXX) -fopenmp -o solver LidDrivenCavitySolver.o LidDrivenCavity.o SolverCG.o $(LIBDIR) $(LIBS)
 
 run: solver
-	mpiexec -n 9 ./solver --Lx 1 --Ly 1 --Nx 201 --Ny 201 --Re 1000 --dt 0.005 --T 5
+	OMP_NUM_THREADS=1 mpiexec -n 1 ./solver --Lx 1 --Ly 1 --Nx 201 --Ny 201 --Re 1000 --dt 0.005 --T 0.25
 
 LidDrivenCavitySolverOMP.o: LidDrivenCavitySolver.cpp
 	$(CXX) $(CXXFLAGS) -fopenmp $(INCDIR) -o LidDrivenCavitySolverOMP.o -c LidDrivenCavitySolver.cpp 
@@ -39,8 +39,7 @@ solverOMP: LidDrivenCavitySolverOMP.o LidDrivenCavityOMP.o SolverCGOMP.o
 	$(CXX) -fopenmp -o solverOMP LidDrivenCavitySolverOMP.o LidDrivenCavityOMP.o SolverCGOMP.o $(LIBDIR) $(LIBS)
 
 runOMP: solverOMP
-	export OMP_NUM_THREADS=4
-	mpiexec ./solverOMP --Lx 1 --Ly 1 --Nx 201 --Ny 201 --Re 1000 --dt 0.005 --T 0.5
+	OMP_NUM_THREADS=8 mpiexec -n 1 ./solverOMP --Lx 1 --Ly 1 --Nx 401 --Ny 401 --Re 1000 --dt 0.001 --T 0.02
 
 doc:
 	doxygen Doxyfile

@@ -10,3 +10,4 @@ ic.txt
 SolverCG.o
 LidDrivenCavity.o
 LidDrivenCavitySolver.o
+*.er
