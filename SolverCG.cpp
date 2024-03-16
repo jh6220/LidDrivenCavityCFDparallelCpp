@@ -6,6 +6,7 @@ using namespace std;
 #include <cblas.h>
 #include <mpi.h>
 #include <omp.h>
+#include <cmath>
 
 #include "SolverCG.h"
 
@@ -54,78 +55,82 @@ void SolverCG::SetParallelParams(int* pcoords, int pworld_size_root, MPI_Comm px
     dataB_bottom_recv = new double[Nx];
 }
 
-// void SolverCG::ImposeBCParallel(double* inout) {
-
-//     if (coords[0] == 0) {
-//         for (int j = 0; j < Ny; ++j) {
-//             // left
-//             inout[IDX(0,j)]    = 0.0;
-//         }
-//     }
-
-//     if (coords[0] == world_size_root-1) {
-//         for (int j = 0; j < Ny; ++j) {
-//             // right
-//             inout[IDX(Nx-1,j)] = 0.0;        }
-//     }
-
-//     if (coords[1] == 0) {
-//         for (int i = 0; i < Nx; ++i) {
-//             // top
-//             inout[IDX(i,0)]    = 0.0;
-//         }
-//     }
-
-//     if (coords[1] == world_size_root-1) {
-//         for (int i = 0; i < Nx; ++i) {
-//             // bottom
-//             inout[IDX(i,Ny-1)] = 0.0;
-//         }
-//     }
-
-// }
-
 void SolverCG::ImposeBCParallel(double* inout) {
-
-    #pragma omp parallel
-    {
-        #pragma omp single
-        {    
-            if (coords[0] == 0) {
-                #pragma omp task
-                for (int j = 0; j < Ny; ++j) {
-                    // left
-                    inout[IDX(0,j)]    = 0.0;
-                }
-            }
-
-            if (coords[0] == world_size_root-1) {
-                #pragma omp task
-                for (int j = 0; j < Ny; ++j) {
-                    // right
-                    inout[IDX(Nx-1,j)] = 0.0;        }
-            }
-
-            if (coords[1] == 0) {
-                #pragma omp task
-                for (int i = 0; i < Nx; ++i) {
-                    // top
-                    inout[IDX(i,0)]    = 0.0;
-                }
-            }
-
-            if (coords[1] == world_size_root-1) {
-                #pragma omp task
-                for (int i = 0; i < Nx; ++i) {
-                    // bottom
-                    inout[IDX(i,Ny-1)] = 0.0;
-                }
-            }
+    int i,j;
+    if (coords[0] == 0) {
+        #pragma omp parallel for default(shared) private(j) schedule(static)
+        for (j = 0; j < Ny; ++j) {
+            // left
+            inout[IDX(0,j)]    = 0.0;
         }
-        #pragma omp taskwait // Ensure all tasks are completed
+    }
+
+    if (coords[0] == world_size_root-1) {
+        #pragma omp parallel for default(shared) private(j) schedule(static)
+        for (j = 0; j < Ny; ++j) {
+            // right
+            inout[IDX(Nx-1,j)] = 0.0;        }
+    }
+
+    if (coords[1] == 0) {
+        #pragma omp parallel for default(shared) private(i) schedule(static)
+        for (i = 0; i < Nx; ++i) {
+            // top
+            inout[IDX(i,0)]    = 0.0;
+        }
+    }
+
+    if (coords[1] == world_size_root-1) {
+        #pragma omp parallel for default(shared) private(i) schedule(static)
+        for (i = 0; i < Nx; ++i) {
+            // bottom
+            inout[IDX(i,Ny-1)] = 0.0;
+        }
     }
 
 }
+
+// void SolverCG::ImposeBCParallel(double* inout) {
+
+//     #pragma omp parallel
+//     {
+//         #pragma omp single
+//         {    
+//             if (coords[0] == 0) {
+//                 #pragma omp task
+//                 for (int j = 0; j < Ny; ++j) {
+//                     // left
+//                     inout[IDX(0,j)]    = 0.0;
+//                 }
+//             }
+
+//             if (coords[0] == world_size_root-1) {
+//                 #pragma omp task
+//                 for (int j = 0; j < Ny; ++j) {
+//                     // right
+//                     inout[IDX(Nx-1,j)] = 0.0;        }
+//             }
+
+//             if (coords[1] == 0) {
+//                 #pragma omp task
+//                 for (int i = 0; i < Nx; ++i) {
+//                     // top
+//                     inout[IDX(i,0)]    = 0.0;
+//                 }
+//             }
+
+//             if (coords[1] == world_size_root-1) {
+//                 #pragma omp task
+//                 for (int i = 0; i < Nx; ++i) {
+//                     // bottom
+//                     inout[IDX(i,Ny-1)] = 0.0;
+//                 }
+//             }
+//         }
+//         #pragma omp taskwait // Ensure all tasks are completed
+//     }
+
+// }
 
 void SolverCG::UpdateDataWithParallelProcesses(double* data, int tag) {
     MPI_Request request_left, request_right, request_top, request_bottom;

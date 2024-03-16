@@ -2,10 +2,11 @@
 .DS_Store
 solver.dSYM/
 solver
+solverOMP
 final.txt
 final_201_201_1000_5.txt
 ic.txt
+*.o
 SolverCG.o
 LidDrivenCavity.o
 LidDrivenCavitySolver.o
-ploting.ipynb
