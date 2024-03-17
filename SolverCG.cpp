@@ -129,6 +129,7 @@ void SolverCG::ImposeBCParallel(double* inout) {
         }
         #pragma omp taskwait // Ensure all tasks are completed
     }
+
 }
 
 void SolverCG::UpdateDataWithParallelProcesses(double* data, int tag) {
