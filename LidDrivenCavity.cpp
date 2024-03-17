@@ -17,6 +17,9 @@ using namespace std;
 #include "LidDrivenCavity.h"
 #include "SolverCG.h"
 
+/**
+ * @brief Initialises the LidDrivenCavity object which handles the time advancement of the lidDrivenCavity solution.
+*/
 LidDrivenCavity::LidDrivenCavity()
 {
     MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
@@ -46,6 +49,11 @@ void LidDrivenCavity::SetDomainSize(double xlen, double ylen)
     UpdateDxDy();
 }
 
+/**
+ * @brief Sets the grid size for LidDriveCavity object and defines the variables necessery for MPI multiprocesing such as the Cartesian tolopogy
+ * @param nx    integer, number of points in a grid along x coordinate
+ * @param ny    integer, number of points in a grid along y coordinate
+*/
 void LidDrivenCavity::SetGridSize(int nx, int ny)
 {
     this->Nx = nx;
