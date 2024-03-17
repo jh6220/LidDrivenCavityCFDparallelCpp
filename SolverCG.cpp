@@ -12,12 +12,20 @@ using namespace std;
 
 #define IDX(I,J) ((J)*Nx + (I))
 
+/**
+ * @brief Construct a new SolverCG::SolverCG object
+ * @param pNx   Number of grid points in x-direction
+ * @param pNy   Number of grid points in y-direction
+ * @param pdx   Grid spacing in x-direction
+ * @param pdy   Grid spacing in y-direction
+*/
 SolverCG::SolverCG(int pNx, int pNy, double pdx, double pdy)
 {
     dx = pdx;
     dy = pdy;
     Nx = pNx;
     Ny = pNy;
+    // Initialise arrays
     n = Nx*Ny;
     r = new double[n];
     p = new double[n];
@@ -25,7 +33,9 @@ SolverCG::SolverCG(int pNx, int pNy, double pdx, double pdy)
     t = new double[n]; //temp
 }
 
-
+/**
+ * @brief Destroy the SolverCG::SolverCG object
+*/
 SolverCG::~SolverCG()
 {
     delete[] r;
@@ -34,6 +44,14 @@ SolverCG::~SolverCG()
     delete[] t;
 }
 
+/**
+ * @brief Set the parameters regarding MPI parallelism
+ * @param pcoords           Coordinates of the process in the 2D grid (int[2])
+ * @param pworld_size_root  Number of processes in each direction
+ * @param pxCoordComm       Communicator for the x-direction of 2D Cartesian topology
+ * @param pyCoordComm       Communicator for the y-direction of 2D Cartesian topology
+ * @param pworld_rank       Rank of the process in the global communicator
+*/
 void SolverCG::SetParallelParams(int* pcoords, int pworld_size_root, MPI_Comm pxCoordComm, MPI_Comm pyCoordComm, int pworld_rank)
 {
     coords[0] = pcoords[0];
@@ -44,6 +62,7 @@ void SolverCG::SetParallelParams(int* pcoords, int pworld_size_root, MPI_Comm px
     yCoordComm = pyCoordComm;
     world_rank = pworld_rank;
 
+    // Allocate memory for the buffers array which are used to update the boundary data with parallel processes
     dataB_left_sent = new double[Ny];
     dataB_right_sent = new double[Ny];
     dataB_top_sent = new double[Nx];
@@ -90,8 +109,11 @@ void SolverCG::SetParallelParams(int* pcoords, int pworld_size_root, MPI_Comm px
 
 // }
 
+/**
+ * @brief Impose boundary conditions on the local stram function array, applied only to the global boundaries of the local domain
+ * @param inout     Input array
+*/
 void SolverCG::ImposeBCParallel(double* inout) {
-
     #pragma omp parallel
     {
         #pragma omp single
@@ -99,7 +121,6 @@ void SolverCG::ImposeBCParallel(double* inout) {
             if (coords[0] == 0) {
                 #pragma omp task
                 for (int j = 0; j < Ny; ++j) {
-                    // left
                     inout[IDX(0,j)]    = 0.0;
                 }
             }
@@ -107,14 +128,12 @@ void SolverCG::ImposeBCParallel(double* inout) {
             if (coords[0] == world_size_root-1) {
                 #pragma omp task
                 for (int j = 0; j < Ny; ++j) {
-                    // right
                     inout[IDX(Nx-1,j)] = 0.0;        }
             }
 
             if (coords[1] == 0) {
                 #pragma omp task
                 for (int i = 0; i < Nx; ++i) {
-                    // top
                     inout[IDX(i,0)]    = 0.0;
                 }
             }
@@ -122,7 +141,6 @@ void SolverCG::ImposeBCParallel(double* inout) {
             if (coords[1] == world_size_root-1) {
                 #pragma omp task
                 for (int i = 0; i < Nx; ++i) {
-                    // bottom
                     inout[IDX(i,Ny-1)] = 0.0;
                 }
             }
@@ -132,32 +150,33 @@ void SolverCG::ImposeBCParallel(double* inout) {
 
 }
 
+/**
+ * @brief Update the boundary data of the local stream function array with the data from the neighbouring processes
+ * @param data     Input array
+ * @param tag      Tag for the MPI communication
+*/
 void SolverCG::UpdateDataWithParallelProcesses(double* data, int tag) {
     MPI_Request request_left, request_right, request_top, request_bottom;
     // Collect boundary data to buffers and sent to neighbours
     if (coords[0] != 0) {
-        // left
         for (int j = 0; j < Ny; ++j) {
             dataB_left_sent[j] = data[IDX(1, j)];
         }
         MPI_Isend(dataB_left_sent, Ny, MPI_DOUBLE, coords[0]-1, tag, xCoordComm, &request_left);
     }
     if (coords[0] != world_size_root-1) {
-        // right
         for (int j = 0; j < Ny; ++j) {
             dataB_right_sent[j] = data[IDX(Nx-2, j)];
         }
         MPI_Isend(dataB_right_sent, Ny, MPI_DOUBLE, coords[0]+1, tag, xCoordComm, &request_right);
     }
     if (coords[1] != 0) {
-        // top
         for (int i = 0; i < Nx; ++i) {
             dataB_top_sent[i] = data[IDX(i,1)];
         }
         MPI_Isend(dataB_top_sent, Nx, MPI_DOUBLE, coords[1]-1, tag, yCoordComm, &request_top);
     }
     if (coords[1] != world_size_root-1) {
-        // bottom
         for (int i = 0; i < Nx; ++i) {
             dataB_bottom_sent[i] = data[IDX(i, Ny-2)];
         }
@@ -201,6 +220,11 @@ void SolverCG::PrintMatrix(int Ny, int Nx, double* M) {
     cout << endl;
 }
 
+/**
+ * @brief Calculate the global residual of the data from all processes
+ * @param r     Input array
+ * @return double 
+*/
 double SolverCG::CalculateEpsGlobalParallel(double* r) {
     eps = 0;
     int j = 0;
@@ -214,12 +238,22 @@ double SolverCG::CalculateEpsGlobalParallel(double* r) {
     return eps_global;
 }
 
+/**
+ * @brief Apply the operator Nabla^2 to the input array
+ * @param in    Input array
+ * @param out   Output array
+ * @param factor    Factor to multiply the output array with
+*/
 void SolverCG::PreconditionParallel(double* in, double* out, double factor) {
     cblas_dcopy(n, in, 1, out, 1);
     cblas_dscal(n, factor, out, 1);
 }
 
-
+/**
+ * @brief Solve the linear system Ax = b using the Conjugate Gradient method with MPI and OMP parallelism
+ * @param b     Right-hand side of the linear system
+ * @param x     Solution of the linear system
+*/
 void SolverCG::SolveParallel(double* b, double* x) {
     int k,i;
     double alpha_num, alpha_den, alpha_num_global, alpha_den_global, alpha_global;
@@ -233,8 +267,6 @@ void SolverCG::SolveParallel(double* b, double* x) {
         cout << "Norm is " << eps_global << endl;
         return;
     }
-
-
 
     UpdateDataWithParallelProcesses(p, 0);
 
@@ -328,6 +360,11 @@ void SolverCG::SolveParallel(double* b, double* x) {
     }
 }
 
+/**
+ * @brief Solve the linear system Ax = b using the Conjugate Gradient method without parallelism
+ * @param in    Input array
+ * @param out   Output array
+*/
 void SolverCG::Solve(double* b, double* x) {
     unsigned int n = Nx*Ny;
     int k;
@@ -386,27 +423,12 @@ void SolverCG::Solve(double* b, double* x) {
     cout << "Converged in " << k << " iterations. eps = " << eps << endl;
 }
 
-// void SolverCG::ApplyOperator(double* in, double* out) {
-//     // Assume ordered with y-direction fastest (column-by-column)
-//     double dx2i = 1.0/dx/dx;
-//     double dy2i = 1.0/dy/dy;
-//     int jm1 = 0, jp1 = 2;
-
-//     for (int j = 1; j < Ny - 1; ++j) {
-//         for (int i = 1; i < Nx - 1; ++i) {
-//             out[IDX(i,j)] = ( -     in[IDX(i-1, j)]
-//                               + 2.0*in[IDX(i,   j)]
-//                               -     in[IDX(i+1, j)])*dx2i
-//                           + ( -     in[IDX(i, jm1)]
-//                               + 2.0*in[IDX(i,   j)]
-//                               -     in[IDX(i, jp1)])*dy2i;
-//         }
-//         jm1++;
-//         jp1++;
-//     }
-
+/**
+ * @brief Apply the linear operator to the input array
+ * @param in    Input array
+ * @param out   Output array
+*/
 void SolverCG::ApplyOperator(double* in, double* out) {
-    // Assume ordered with y-direction fastest (column-by-column)
     double dx2i = 1.0/dx/dx;
     double dy2i = 1.0/dy/dy;
     int jm1 = 0, jp1 = 2;
@@ -426,7 +448,11 @@ void SolverCG::ApplyOperator(double* in, double* out) {
     }
 }
 
-
+/**
+ * @brief Precondition the input array by dividing by the factor
+ * @param in    Input array
+ * @param out   Output array
+*/
 void SolverCG::Precondition(double* in, double* out) {
     int i, j;
     double dx2i = 1.0/dx/dx;
@@ -449,6 +475,10 @@ void SolverCG::Precondition(double* in, double* out) {
     }
 }
 
+/**
+ * @brief Impose boundary conditions on the input array wihtout parallelism
+ * @param inout     Input array
+*/
 void SolverCG::ImposeBC(double* inout) {
         // Boundaries
     for (int i = 0; i < Nx; ++i) {
