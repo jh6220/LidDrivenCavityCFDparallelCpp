@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['liddrivencavity_0',['LidDrivenCavity',['../classLidDrivenCavity.html',1,'']]]
+  ['liddrivencavity_0',['LidDrivenCavity',['../class_lid_driven_cavity.html',1,'']]]
 ];
