@@ -1,0 +1,106 @@
+\hypertarget{classSolverCG}{}\doxysection{Solver\+CG Class Reference}
+\label{classSolverCG}\index{SolverCG@{SolverCG}}
+\doxysubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{classSolverCG_af2e6b28644c4379d49bffb377c020345}{Solver\+CG}} (int p\+Nx, int p\+Ny, double pdx, double pdy)
+\begin{DoxyCompactList}\small\item\em Construct a new \mbox{\hyperlink{classSolverCG_af2e6b28644c4379d49bffb377c020345}{Solver\+CG\+::\+Solver\+CG}} object. \end{DoxyCompactList}\item 
+\mbox{\Hypertarget{classSolverCG_a996c32d6fce0b553c981a6c1f86387e8}\label{classSolverCG_a996c32d6fce0b553c981a6c1f86387e8}} 
+{\bfseries $\sim$\+Solver\+CG} ()
+\begin{DoxyCompactList}\small\item\em Destroy the \mbox{\hyperlink{classSolverCG_af2e6b28644c4379d49bffb377c020345}{Solver\+CG\+::\+Solver\+CG}} object. \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classSolverCG_a8cc7c4b2651399f9dc5b5ef2bdfeebf7}{Solve}} (double $\ast$b, double $\ast$x)
+\begin{DoxyCompactList}\small\item\em Solve the linear system Ax = b using the Conjugate Gradient method without parallelism. \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classSolverCG_a3008cda8602555ce886289a7ab6821dc}{Solve\+Parallel}} (double $\ast$b, double $\ast$x)
+\begin{DoxyCompactList}\small\item\em Solve the linear system Ax = b using the Conjugate Gradient method with MPI and OMP parallelism. \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classSolverCG_a4217ed81ea568fe78d9cbd1d2534ef1e}{Set\+Parallel\+Params}} (int $\ast$pcoords, int pworld\+\_\+size\+\_\+root, MPI\+\_\+\+Comm px\+Coord\+Comm, MPI\+\_\+\+Comm py\+Coord\+Comm, int pworld\+\_\+rank)
+\begin{DoxyCompactList}\small\item\em Set the parameters regarding MPI parallelism. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Constructor \& Destructor Documentation}
+\mbox{\Hypertarget{classSolverCG_af2e6b28644c4379d49bffb377c020345}\label{classSolverCG_af2e6b28644c4379d49bffb377c020345}} 
+\index{SolverCG@{SolverCG}!SolverCG@{SolverCG}}
+\index{SolverCG@{SolverCG}!SolverCG@{SolverCG}}
+\doxysubsubsection{\texorpdfstring{SolverCG()}{SolverCG()}}
+{\footnotesize\ttfamily Solver\+CG\+::\+Solver\+CG (\begin{DoxyParamCaption}\item[{int}]{p\+Nx,  }\item[{int}]{p\+Ny,  }\item[{double}]{pdx,  }\item[{double}]{pdy }\end{DoxyParamCaption})}
+
+
+
+Construct a new \mbox{\hyperlink{classSolverCG_af2e6b28644c4379d49bffb377c020345}{Solver\+CG\+::\+Solver\+CG}} object. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em p\+Nx} & Number of grid points in x-\/direction \\
+\hline
+{\em p\+Ny} & Number of grid points in y-\/direction \\
+\hline
+{\em pdx} & Grid spacing in x-\/direction \\
+\hline
+{\em pdy} & Grid spacing in y-\/direction \\
+\hline
+\end{DoxyParams}
+
+
+\doxysubsection{Member Function Documentation}
+\mbox{\Hypertarget{classSolverCG_a4217ed81ea568fe78d9cbd1d2534ef1e}\label{classSolverCG_a4217ed81ea568fe78d9cbd1d2534ef1e}} 
+\index{SolverCG@{SolverCG}!SetParallelParams@{SetParallelParams}}
+\index{SetParallelParams@{SetParallelParams}!SolverCG@{SolverCG}}
+\doxysubsubsection{\texorpdfstring{SetParallelParams()}{SetParallelParams()}}
+{\footnotesize\ttfamily void Solver\+CG\+::\+Set\+Parallel\+Params (\begin{DoxyParamCaption}\item[{int $\ast$}]{pcoords,  }\item[{int}]{pworld\+\_\+size\+\_\+root,  }\item[{MPI\+\_\+\+Comm}]{px\+Coord\+Comm,  }\item[{MPI\+\_\+\+Comm}]{py\+Coord\+Comm,  }\item[{int}]{pworld\+\_\+rank }\end{DoxyParamCaption})}
+
+
+
+Set the parameters regarding MPI parallelism. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em pcoords} & Coordinates of the process in the 2D grid (int\mbox{[}2\mbox{]}) \\
+\hline
+{\em pworld\+\_\+size\+\_\+root} & Number of processes in each direction \\
+\hline
+{\em px\+Coord\+Comm} & Communicator for the x-\/direction of 2D Cartesian topology \\
+\hline
+{\em py\+Coord\+Comm} & Communicator for the y-\/direction of 2D Cartesian topology \\
+\hline
+{\em pworld\+\_\+rank} & Rank of the process in the global communicator \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{classSolverCG_a8cc7c4b2651399f9dc5b5ef2bdfeebf7}\label{classSolverCG_a8cc7c4b2651399f9dc5b5ef2bdfeebf7}} 
+\index{SolverCG@{SolverCG}!Solve@{Solve}}
+\index{Solve@{Solve}!SolverCG@{SolverCG}}
+\doxysubsubsection{\texorpdfstring{Solve()}{Solve()}}
+{\footnotesize\ttfamily void Solver\+CG\+::\+Solve (\begin{DoxyParamCaption}\item[{double $\ast$}]{b,  }\item[{double $\ast$}]{x }\end{DoxyParamCaption})}
+
+
+
+Solve the linear system Ax = b using the Conjugate Gradient method without parallelism. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em in} & Input array \\
+\hline
+{\em out} & Output array \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{classSolverCG_a3008cda8602555ce886289a7ab6821dc}\label{classSolverCG_a3008cda8602555ce886289a7ab6821dc}} 
+\index{SolverCG@{SolverCG}!SolveParallel@{SolveParallel}}
+\index{SolveParallel@{SolveParallel}!SolverCG@{SolverCG}}
+\doxysubsubsection{\texorpdfstring{SolveParallel()}{SolveParallel()}}
+{\footnotesize\ttfamily void Solver\+CG\+::\+Solve\+Parallel (\begin{DoxyParamCaption}\item[{double $\ast$}]{b,  }\item[{double $\ast$}]{x }\end{DoxyParamCaption})}
+
+
+
+Solve the linear system Ax = b using the Conjugate Gradient method with MPI and OMP parallelism. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em b} & Right-\/hand side of the linear system \\
+\hline
+{\em x} & Solution of the linear system \\
+\hline
+\end{DoxyParams}
+
+
+The documentation for this class was generated from the following files\+:\begin{DoxyCompactItemize}
+\item 
+Solver\+CG.\+h\item 
+Solver\+CG.\+cpp\end{DoxyCompactItemize}

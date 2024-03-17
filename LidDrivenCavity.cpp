@@ -530,33 +530,29 @@ void LidDrivenCavity::Advance(int idxT)
     // }
 
     if (coords[0] == 0) {
-        // #pragma omp parallel for default(shared) private(j) schedule(static)
+        #pragma omp parallel for default(shared) private(j) schedule(static)
         for (j = 1; j < Ny_local-1; ++j) {
-            // left
             v[IDX_local(0,j)]    = 2.0 * dx2i * (s[IDX_local(0,j)]    - s[IDX_local(1,j)]);
         }
     }
 
     if (coords[0] == world_size_root-1) {
-        // #pragma omp parallel for default(shared) private(j) schedule(static)
+        #pragma omp parallel for default(shared) private(j) schedule(static)
         for (j = 1; j < Ny_local-1; ++j) {
-            // right
             v[IDX_local(Nx_local-1,j)] = 2.0 * dx2i * (s[IDX_local(Nx_local-1,j)] - s[IDX_local(Nx_local-2,j)]);
         }
     }
 
     if (coords[1] == 0) {
-        // #pragma omp parallel for default(shared) private(i) schedule(static)
+        #pragma omp parallel for default(shared) private(i) schedule(static)
         for (i = 1; i < Nx_local-1; ++i) {
-            // top
             v[IDX_local(i,0)]    = 2.0 * dy2i * (s[IDX_local(i,0)]    - s[IDX_local(i,1)]);
         }
     }
 
     if (coords[1] == world_size_root-1) {
-        // #pragma omp parallel for default(shared) private(i) schedule(static)
+        #pragma omp parallel for default(shared) private(i) schedule(static)
         for (i = 1; i < Nx_local-1; ++i) {
-            // bottom
             v[IDX_local(i,Ny_local-1)] = 2.0 * dy2i * (s[IDX_local(i,Ny_local-1)] - s[IDX_local(i,Ny_local-2)])
                            - 2.0 * dyi*U;
         }
@@ -565,14 +561,16 @@ void LidDrivenCavity::Advance(int idxT)
     //Exchange vorticity data with parallel processes
     UpdateDataWithParallelProcesses(v, n_tags*idxT+0);
 
-    // Compute interior vorticity
-    // #pragma omp parallel for collapse(2) private(i,j)
+    int Nj,k;
+
+    #pragma omp parallel for private(j,k,Nj)
     for (j = 1; j < Ny_local - 1; ++j) {
-        for (i = 1; i < Nx_local - 1; ++i) {
-            v[IDX_local(i,j)] = dx2i*(
-                    2.0 * s[IDX_local(i,j)] - s[IDX_local(i+1,j)] - s[IDX_local(i-1,j)])
+        Nj = j*Nx_local;
+        for (k = Nj+1; k < Nj+Nx_local - 1; ++k) {
+            v[k] = dx2i*(
+                    2.0 * s[k] - s[k+1] - s[k-1])
                         + 1.0/dy/dy*(
-                    2.0 * s[IDX_local(i,j)] - s[IDX_local(i,j+1)] - s[IDX_local(i,j-1)]);
+                    2.0 * s[k] - s[k+Nx_local] - s[k-Nx_local]);
         }
     }
 
@@ -580,18 +578,20 @@ void LidDrivenCavity::Advance(int idxT)
     UpdateDataWithParallelProcesses(v, n_tags*idxT+1);
 
     // Time advance vorticity
-    // #pragma omp parallel for collapse(2) private(i,j)
+    #pragma omp parallel for private(j,k,Nj)
     for (j = 1; j < Ny_local - 1; ++j) {
-        for (i = 1; i < Nx_local - 1; ++i) {
-            vnew[IDX_local(i,j)] = v[IDX_local(i,j)] + dt*(
-                ( (s[IDX_local(i+1,j)] - s[IDX_local(i-1,j)]) * 0.5 * dxi
-                 *(v[IDX_local(i,j+1)] - v[IDX_local(i,j-1)]) * 0.5 * dyi)
-              - ( (s[IDX_local(i,j+1)] - s[IDX_local(i,j-1)]) * 0.5 * dyi
-                 *(v[IDX_local(i+1,j)] - v[IDX_local(i-1,j)]) * 0.5 * dxi)
-              + nu * (v[IDX_local(i+1,j)] - 2.0 * v[IDX_local(i,j)] + v[IDX_local(i-1,j)])*dx2i
-              + nu * (v[IDX_local(i,j+1)] - 2.0 * v[IDX_local(i,j)] + v[IDX_local(i,j-1)])*dy2i);
+        Nj = j*Nx_local;
+        for (k = Nj+1; k < Nj+Nx_local - 1; ++k) {
+            vnew[k] = v[k] + dt*(
+                ( (s[k+1] - s[k-1]) * 0.5 * dxi
+                 *(v[k+Nx_local] - v[k-Nx_local]) * 0.5 * dyi)
+              - ( (s[k+Nx_local] - s[k-Nx_local]) * 0.5 * dyi
+                 *(v[k+1] - v[k-1]) * 0.5 * dxi)
+              + nu * (v[k+1] - 2.0 * v[k] + v[k-1])*dx2i
+              + nu * (v[k+Nx_local] - 2.0 * v[k] + v[k-Nx_local])*dy2i);
         }
     }
+
 
     // Solve Poisson problem
     cg->SolveParallel(vnew, s);

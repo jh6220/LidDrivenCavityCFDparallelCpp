@@ -1,5 +1,7 @@
-CXX=mpicxx
-CXXFLAGS= -std=c++11 -Wall -O3 -g
+# CXX= OMPI_CXX=g++-10 mpicxx
+# CXXFLAGS= -std=c++11 -Wall -O3 -g
+CXX= mpicxx
+CXXFLAGS= -std=c++11 -Wall -O3
 # Include directories
 INCDIR=-I/opt/homebrew/Cellar/openblas/0.3.26/include -I/opt/homebrew/Cellar/boost/1.84.0_1/include
 # Library directories
@@ -24,7 +26,7 @@ solver: LidDrivenCavitySolver.o LidDrivenCavity.o SolverCG.o
 	$(CXX) -fopenmp -o solver LidDrivenCavitySolver.o LidDrivenCavity.o SolverCG.o $(LIBDIR) $(LIBS)
 
 run: solver
-	OMP_NUM_THREADS=4 mpiexec -n 1 ./solver --Lx 1 --Ly 1 --Nx 401 --Ny 401 --Re 1000 --dt 0.001 --T 0.01
+	OMP_NUM_THREADS=1 mpiexec -n 16 ./solver --Lx 1 --Ly 1 --Nx 201 --Ny 201 --Re 1000 --dt 0.005 --T 0.5
 
 LidDrivenCavitySolverOMP.o: LidDrivenCavitySolver.cpp
 	$(CXX) $(CXXFLAGS) -fopenmp $(INCDIR) -o LidDrivenCavitySolverOMP.o -c LidDrivenCavitySolver.cpp 

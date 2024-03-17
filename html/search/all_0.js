@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['liddrivencavity_0',['LidDrivenCavity',['../class_lid_driven_cavity.html',1,'']]],
-  ['liddrivencavitycfdparallelcpp_1',['LidDrivenCavityCFDparallelCpp',['../md__r_e_a_d_m_e.html',1,'']]]
+  ['initialise_0',['Initialise',['../classLidDrivenCavity.html#ab0eb448219134e835173e94874a3983a',1,'LidDrivenCavity']]],
+  ['integrate_1',['Integrate',['../classLidDrivenCavity.html#a80cd7032d10f09279d62d03335023e72',1,'LidDrivenCavity']]]
 ];

@@ -1,0 +1,47 @@
+\hypertarget{SolverCG_8h_source}{}\doxysection{Solver\+CG.\+h}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{1 \textcolor{preprocessor}{\#pragma once}}
+\DoxyCodeLine{2 }
+\DoxyCodeLine{3 \textcolor{preprocessor}{\#include <mpi.h>}}
+\DoxyCodeLine{4 }
+\DoxyCodeLine{5 \textcolor{keyword}{class }\mbox{\hyperlink{classSolverCG}{SolverCG}}}
+\DoxyCodeLine{6 \{}
+\DoxyCodeLine{7 \textcolor{keyword}{public}:}
+\DoxyCodeLine{8     \mbox{\hyperlink{classSolverCG_af2e6b28644c4379d49bffb377c020345}{SolverCG}}(\textcolor{keywordtype}{int} pNx, \textcolor{keywordtype}{int} pNy, \textcolor{keywordtype}{double} pdx, \textcolor{keywordtype}{double} pdy);}
+\DoxyCodeLine{9     \mbox{\hyperlink{classSolverCG_a996c32d6fce0b553c981a6c1f86387e8}{\string~SolverCG}}();}
+\DoxyCodeLine{10 }
+\DoxyCodeLine{11     \textcolor{keywordtype}{void} \mbox{\hyperlink{classSolverCG_a8cc7c4b2651399f9dc5b5ef2bdfeebf7}{Solve}}(\textcolor{keywordtype}{double}* b, \textcolor{keywordtype}{double}* x);}
+\DoxyCodeLine{12     \textcolor{keywordtype}{void} \mbox{\hyperlink{classSolverCG_a3008cda8602555ce886289a7ab6821dc}{SolveParallel}}(\textcolor{keywordtype}{double}* b, \textcolor{keywordtype}{double}* x);}
+\DoxyCodeLine{13     \textcolor{keywordtype}{void} \mbox{\hyperlink{classSolverCG_a4217ed81ea568fe78d9cbd1d2534ef1e}{SetParallelParams}}(\textcolor{keywordtype}{int}* pcoords, \textcolor{keywordtype}{int} pworld\_size\_root, MPI\_Comm pxCoordComm, MPI\_Comm pyCoordComm, \textcolor{keywordtype}{int} pworld\_rank);}
+\DoxyCodeLine{14 }
+\DoxyCodeLine{15 \textcolor{keyword}{private}:}
+\DoxyCodeLine{16     \textcolor{keywordtype}{double} dx;}
+\DoxyCodeLine{17     \textcolor{keywordtype}{double} dy;}
+\DoxyCodeLine{18     \textcolor{keywordtype}{double} eps, eps\_global;}
+\DoxyCodeLine{19     \textcolor{keywordtype}{int} Nx;}
+\DoxyCodeLine{20     \textcolor{keywordtype}{int} Ny;}
+\DoxyCodeLine{21     \textcolor{keywordtype}{unsigned} \textcolor{keywordtype}{int} n;}
+\DoxyCodeLine{22     \textcolor{keywordtype}{double}* r;}
+\DoxyCodeLine{23     \textcolor{keywordtype}{double}* p;}
+\DoxyCodeLine{24     \textcolor{keywordtype}{double}* z;}
+\DoxyCodeLine{25     \textcolor{keywordtype}{double}* t;}
+\DoxyCodeLine{26     \textcolor{keywordtype}{double}* dataB\_left\_sent, *dataB\_right\_sent, *dataB\_top\_sent, *dataB\_bottom\_sent;}
+\DoxyCodeLine{27     \textcolor{keywordtype}{double}* dataB\_left\_recv, *dataB\_right\_recv, *dataB\_top\_recv, *dataB\_bottom\_recv;}
+\DoxyCodeLine{28     \textcolor{keywordtype}{int} coords[2];}
+\DoxyCodeLine{29     \textcolor{keywordtype}{int} world\_size\_root, world\_rank, world\_size;}
+\DoxyCodeLine{30     MPI\_Comm xCoordComm, yCoordComm;}
+\DoxyCodeLine{31 }
+\DoxyCodeLine{32     \textcolor{keywordtype}{void} Precondition(\textcolor{keywordtype}{double}* p, \textcolor{keywordtype}{double}* t);}
+\DoxyCodeLine{33     \textcolor{keywordtype}{void} ImposeBC(\textcolor{keywordtype}{double}* p);}
+\DoxyCodeLine{34     \textcolor{keywordtype}{void} ApplyOperator(\textcolor{keywordtype}{double}* p, \textcolor{keywordtype}{double}* t);}
+\DoxyCodeLine{35     \textcolor{keywordtype}{void} ImposeBCParallel(\textcolor{keywordtype}{double}* inout);}
+\DoxyCodeLine{36     \textcolor{keywordtype}{void} UpdateDataWithParallelProcesses(\textcolor{keywordtype}{double}* data, \textcolor{keywordtype}{int} tag);}
+\DoxyCodeLine{37     \textcolor{keywordtype}{void} PrintMatrix(\textcolor{keywordtype}{int} Ny, \textcolor{keywordtype}{int} Nx, \textcolor{keywordtype}{double}* M);}
+\DoxyCodeLine{38     \textcolor{keywordtype}{double} CalculateEpsGlobalParallel(\textcolor{keywordtype}{double}* r);}
+\DoxyCodeLine{39     \textcolor{keywordtype}{void} PreconditionParallel(\textcolor{keywordtype}{double}* in, \textcolor{keywordtype}{double}* out, \textcolor{keywordtype}{double} factor);}
+\DoxyCodeLine{40 }
+\DoxyCodeLine{41 \};}
+\DoxyCodeLine{42 }
+
+\end{DoxyCode}
