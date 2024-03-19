@@ -1,9 +1,11 @@
 .vscode/
 .DS_Store
 solver.dSYM/
+Images/
 solver
 solverOMP
 final.txt
+finalOrig.txt
 final_201_201_1000_5.txt
 ic.txt
 *.o

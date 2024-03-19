@@ -26,7 +26,7 @@ solver: LidDrivenCavitySolver.o LidDrivenCavity.o SolverCG.o
 	$(CXX) -fopenmp -o solver LidDrivenCavitySolver.o LidDrivenCavity.o SolverCG.o $(LIBDIR) $(LIBS)
 
 run: solver
-	OMP_NUM_THREADS=1 mpiexec -n 16 ./solver --Lx 1 --Ly 1 --Nx 201 --Ny 201 --Re 1000 --dt 0.005 --T 0.5
+	OMP_NUM_THREADS=1 mpiexec -n 9 ./solver --Lx 1 --Ly 1 --Nx 201 --Ny 201 --Re 1000 --dt 0.005 --T 50
 
 LidDrivenCavitySolverOMP.o: LidDrivenCavitySolver.cpp
 	$(CXX) $(CXXFLAGS) -fopenmp $(INCDIR) -o LidDrivenCavitySolverOMP.o -c LidDrivenCavitySolver.cpp 
