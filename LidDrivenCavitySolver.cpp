@@ -16,7 +16,13 @@ namespace po = boost::program_options;
  * \code make run \endcode
  * 
  * you can run the tests with the following command:
- * \code make run-tests \endcode
+ * \code make test \endcode
+ * 
+ * you can clean the execution and linked files with:
+ * \code make clean \endcode
+ * 
+ * you can generate the documentation with:
+ * \code make docs \endcode
  *
  * \section Code structure
  * 

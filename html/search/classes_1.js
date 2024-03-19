@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['solvercg_0',['SolverCG',['../classSolverCG.html',1,'']]]
+  ['mpifixture_0',['MPIFixture',['../structMPIFixture.html',1,'']]]
 ];

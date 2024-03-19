@@ -32,15 +32,15 @@ run: solver
 doc:
 	doxygen Doxyfile
 
-lidDrivenCavity-test: lidDrivenCavity-test.cpp LidDrivenCavity.o SolverCG.o
-	$(CXX) $(CXXFLAGS) $(INCDIR) -fopenmp -o lidDrivenCavity-test lidDrivenCavity-test.cpp LidDrivenCavity.o SolverCG.o $(LIBDIR) $(LIBS) -lboost_unit_test_framework
+LidDrivenCavity-test: LidDrivenCavity-test.cpp LidDrivenCavity.o SolverCG.o
+	$(CXX) $(CXXFLAGS) $(INCDIR) -fopenmp -o LidDrivenCavity-test LidDrivenCavity-test.cpp LidDrivenCavity.o SolverCG.o $(LIBDIR) $(LIBS) -lboost_unit_test_framework
 
 SolverCG-test: SolverCG-test.cpp SolverCG.o
 	$(CXX) $(CXXFLAGS) $(INCDIR) -fopenmp -o SolverCG-test SolverCG-test.cpp SolverCG.o $(LIBDIR) $(LIBS) -lboost_unit_test_framework
 
-test: lidDrivenCavity-test SolverCG-test
-	OMP_NUM_THREADS=1 mpiexec -n 4 ./lidDrivenCavity-test
+test: LidDrivenCavity-test SolverCG-test
+	OMP_NUM_THREADS=1 mpiexec -n 4 ./LidDrivenCavity-test
 	OMP_NUM_THREADS=1 mpiexec -n 4 ./SolverCG-test
 
 clean:
-	-rm -f *.o solver lidDrivenCavity-test SolverCG-test
+	-rm -f *.o solver LidDrivenCavity-test SolverCG-test
