@@ -21,8 +21,10 @@ public:
     void Initialise();
     void Integrate();
     void WriteSolution(std::string file);
-    void WriteSolutionParallel(std::string file);
     void PrintConfiguration();
+    void Advance(int t);
+    void UpdateDataWithParallelProcesses(double* data, int tag);
+    
     double nu   = 0.1;
 
 private:
@@ -57,13 +59,10 @@ private:
     double Ly   = 1.0;
     double Re   = 10;
     double U    = 1.0;
-    // double nu   = 0.1;
 
     SolverCG* cg = nullptr;
 
     void CleanUp();
     void UpdateDxDy();
-    void Advance(int t);
-    void UpdateDataWithParallelProcesses(double* data, int tag);
 };
 

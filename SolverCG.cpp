@@ -25,7 +25,7 @@ SolverCG::SolverCG(int pNx, int pNy, double pdx, double pdy)
     dy = pdy;
     Nx = pNx;
     Ny = pNy;
-    // Initialise arrays
+    // Initialise solution arrays
     n = Nx*Ny;
     r = new double[n];
     p = new double[n];
@@ -78,12 +78,11 @@ void SolverCG::SetParallelParams(int* pcoords, int pworld_size_root, MPI_Comm px
  * @brief Impose boundary conditions on the local stram function array, applied only to the global boundaries of the local domain
  * @param inout     Input array
 */
-void SolverCG::ImposeBCParallel(double* inout) {
+void SolverCG::ImposeBC(double* inout) {
     int i,j;
     if (coords[0] == 0) {
         #pragma omp parallel for default(shared) private(j) schedule(static)
         for (j = 0; j < Ny; ++j) {
-            // left
             inout[IDX(0,j)]    = 0.0;
         }
     }
@@ -91,14 +90,12 @@ void SolverCG::ImposeBCParallel(double* inout) {
     if (coords[0] == world_size_root-1) {
         #pragma omp parallel for default(shared) private(j) schedule(static)
         for (j = 0; j < Ny; ++j) {
-            // right
             inout[IDX(Nx-1,j)] = 0.0;        }
     }
 
     if (coords[1] == 0) {
         #pragma omp parallel for default(shared) private(i) schedule(static)
         for (i = 0; i < Nx; ++i) {
-            // top
             inout[IDX(i,0)]    = 0.0;
         }
     }
@@ -106,53 +103,11 @@ void SolverCG::ImposeBCParallel(double* inout) {
     if (coords[1] == world_size_root-1) {
         #pragma omp parallel for default(shared) private(i) schedule(static)
         for (i = 0; i < Nx; ++i) {
-            // bottom
             inout[IDX(i,Ny-1)] = 0.0;
         }
     }
 
 }
-
-// /**
-//  * @brief Impose boundary conditions on the local stram function array, applied only to the global boundaries of the local domain
-//  * @param inout     Input array
-// */
-// void SolverCG::ImposeBCParallel(double* inout) {
-//     #pragma omp parallel
-//     {
-//         #pragma omp single
-//         {    
-//             if (coords[0] == 0) {
-//                 #pragma omp task
-//                 for (int j = 0; j < Ny; ++j) {
-//                     inout[IDX(0,j)]    = 0.0;
-//                 }
-//             }
-
-//             if (coords[0] == world_size_root-1) {
-//                 #pragma omp task
-//                 for (int j = 0; j < Ny; ++j) {
-//                     inout[IDX(Nx-1,j)] = 0.0;        }
-//             }
-
-//             if (coords[1] == 0) {
-//                 #pragma omp task
-//                 for (int i = 0; i < Nx; ++i) {
-//                     inout[IDX(i,0)]    = 0.0;
-//                 }
-//             }
-
-//             if (coords[1] == world_size_root-1) {
-//                 #pragma omp task
-//                 for (int i = 0; i < Nx; ++i) {
-//                     inout[IDX(i,Ny-1)] = 0.0;
-//                 }
-//             }
-//         }
-//         #pragma omp taskwait // Ensure all tasks are completed
-//     }
-
-// }
 
 /**
  * @brief Update the boundary data of the local stream function array with the data from the neighbouring processes
@@ -162,7 +117,7 @@ void SolverCG::ImposeBCParallel(double* inout) {
 void SolverCG::UpdateDataWithParallelProcesses(double* data, int tag) {
     MPI_Request request_left, request_right, request_top, request_bottom;
     int i,j;
-    // Collect boundary data to buffers and sent to neighbours
+    /// Collect boundary data to buffers and sent to neighbours
     if (coords[0] != 0) {
         // #pragma omp parallel for default(shared) private(j) schedule(static)
         for (j = 0; j < Ny; ++j) {
@@ -192,7 +147,7 @@ void SolverCG::UpdateDataWithParallelProcesses(double* data, int tag) {
         MPI_Isend(dataB_bottom_sent, Nx, MPI_DOUBLE, coords[1]+1, tag, yCoordComm, &request_bottom);
     }
 
-    // Receive boundary data from neighbours
+    /// Receive boundary data from neighbours
     if (coords[0] != 0) {
         MPI_Recv(dataB_left_recv, Ny, MPI_DOUBLE, coords[0]-1, tag, xCoordComm, MPI_STATUS_IGNORE);
         // #pragma omp parallel for default(shared) private(j) schedule(static)
@@ -223,16 +178,6 @@ void SolverCG::UpdateDataWithParallelProcesses(double* data, int tag) {
     }
 }
 
-void SolverCG::PrintMatrix(int Ny, int Nx, double* M) {
-    for (int i = 0; i < Nx; ++i) {
-        for (int j = 0; j < Ny; ++j) {
-            cout << M[j*Nx+i] << " ";
-        }
-        cout << endl;
-    }
-    cout << endl;
-}
-
 /**
  * @brief Calculate the global residual of the data from all processes
  * @param r     Input array
@@ -242,28 +187,19 @@ double SolverCG::CalculateEpsGlobalParallel(double* r) {
     eps = 0;
     int j,Nj,kk;
 
+    /// Calculate the local contribution to the residual
     #pragma omp parallel for private(j,Nj,kk) reduction(+:eps)
     for (j=1; j<Ny-1; j++) {
-        // eps += cblas_ddot(Nx-2, r+j*Nx+1, 1, r+j*Nx+1, 1);
         Nj = j*Nx;
         for (kk = Nj+1; kk < Nj+Nx-1; ++kk) {
             eps = eps + r[kk]*r[kk];
         }
     }
+
+    /// Calculate the global residual by summing over all processes
     MPI_Allreduce(&eps, &eps_global, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     eps_global = sqrt(eps_global);
     return eps_global;
-}
-
-/**
- * @brief Apply the operator Nabla^2 to the input array
- * @param in    Input array
- * @param out   Output array
- * @param factor    Factor to multiply the output array with
-*/
-void SolverCG::PreconditionParallel(double* in, double* out, double factor) {
-    cblas_dcopy(n, in, 1, out, 1);
-    cblas_dscal(n, factor, out, 1);
 }
 
 /**
@@ -271,7 +207,8 @@ void SolverCG::PreconditionParallel(double* in, double* out, double factor) {
  * @param b     Right-hand side of the linear system
  * @param x     Solution of the linear system
 */
-void SolverCG::SolveParallel(double* b, double* x) {
+void SolverCG::Solve(double* b, double* x) {
+
     int k,i;
     int j,Nj,kk;
     double alpha_num, alpha_den, alpha_num_global, alpha_den_global, alpha_global;
@@ -279,37 +216,37 @@ void SolverCG::SolveParallel(double* b, double* x) {
     double tol = 0.001;
     double dx2i = 1.0/dx/dx;
     double dy2i = 1.0/dy/dy;
+    /// Calculate the inverse factor for the preconditioner
     double factor = 1.0/(2.0*(1.0/(dx*dx) + 1.0/(dy*dy)));
 
+    /// Calculate the global residual and terminate b=0
     eps_global = CalculateEpsGlobalParallel(b);
-
     if (eps_global < tol) {
         std::fill(x, x+n, 0.0);
         cout << "Norm is " << eps_global << endl;
         return;
     }
 
+    /// Applting the operator to the x_0
     UpdateDataWithParallelProcesses(p, 0);
-
     ApplyOperator(x, t);
-    // cblas_dcopy(n, b, 1, r, 1);        // r_0 = b (i.e. b)
-    ImposeBCParallel(r);
+    ImposeBC(r);
 
-    // cblas_daxpy(n, -1.0, t, 1, r, 1);
-    // PreconditionParallel(r, z, factor);
-    // cblas_dcopy(n, z, 1, p, 1);        // p_0 = r_0
-
+    
     #pragma omp parallel for private(i)
     for (i=0;i<Nx*Ny;i++) {
-        r[i] = b[i]-t[i];
-        z[i] = r[i]*factor;
+        r[i] = b[i]-t[i]; // r_0 = b - A x_0
+        z[i] = r[i]*factor; // preconditioning z_0
         p[i] = z[i];
     }
 
     k = 0;
     int k_max = 5000;
+    /// Main loop interates until the maximum number of iterations is reached or the residual is below the tolerance
     do {
         k++;
+
+        /// Compute the cocal contribution to alpha_k numerator and denominator
         UpdateDataWithParallelProcesses(p, k+1);
 
         alpha_num = 0;
@@ -327,23 +264,19 @@ void SolverCG::SolveParallel(double* b, double* x) {
                 alpha_num = alpha_num + r[kk]*z[kk];
                 alpha_den = alpha_den + t[kk]*p[kk];
             }
-            // alpha_num = alpha_num + cblas_ddot(Nx-2, r+Nj+1, 1, z+Nj+1, 1);
-            // alpha_den = alpha_den + cblas_ddot(Nx-2, t+Nj+1, 1, p+Nj+1, 1);
         }
 
+        /// Compute the global alpha_k by summing the denominators and numerators values over all processes
         MPI_Allreduce(&alpha_num, &alpha_num_global, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         MPI_Allreduce(&alpha_den, &alpha_den_global, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         alpha_global = alpha_num_global/alpha_den_global;
 
+        /// Update the x_{k+1}, r_{k+1} and compute the local contributions to the beta_k and residual eps
         eps = 0;
         beta = 0;
         #pragma omp parallel for private(j,Nj) reduction(+:eps, beta)
         for (j = 1; j < Ny - 1; ++j) {
             Nj = j*Nx;
-            // cblas_daxpy(Nx-2,  alpha_global, p+Nj+1, 1, x+Nj+1, 1);  // x_{k+1} = x_k + alpha_k p_k
-            // cblas_daxpy(Nx-2, -alpha_global, t+Nj+1, 1, r+Nj+1, 1); // r_{k+1} = r_k - alpha_k A p_k
-            // cblas_dcopy(Nx-2, r+Nj+1, 1, z+Nj+1, 1);
-            // cblas_dscal(Nx-2, factor, z+Nj+1, 1);
             for (kk = Nj+1; kk < Nj+Nx-1; ++kk) {
                 x[kk] = x[kk] + alpha_global*p[kk];
                 r[kk] = r[kk] - alpha_global*t[kk];
@@ -351,11 +284,9 @@ void SolverCG::SolveParallel(double* b, double* x) {
                 beta = beta + r[kk]*z[kk];
                 eps = eps + r[kk]*r[kk];
             }
-            // beta = beta + cblas_ddot(Nx-2, r+Nj+1, 1, z+Nj+1, 1);
-            // eps = eps + cblas_ddot(Nx-2, r+Nj+1, 1, r+Nj+1, 1);
-            // eps_temp = cblas_dnrm2(Nx-2, r+Nj+1, 1);
-            // eps = eps + eps_temp*eps_temp;
         }
+
+        /// Compute the global residual by summing the local contributions over all processes and check for convergence
         MPI_Allreduce(&eps, &eps_global, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         eps_global = sqrt(eps_global);
 
@@ -366,13 +297,14 @@ void SolverCG::SolveParallel(double* b, double* x) {
             break;
         }
 
+        /// Compute the global beta_k by summing the local contributions over all processes
         MPI_Allreduce(&beta, &beta_global, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         beta_global = beta_global/alpha_num_global;
 
+        /// Update the p_{k+1}
         #pragma omp parallel for private(i)
         for (i=0; i<Nx*Ny; i++) {
-            t[i]=z[i] + beta_global*p[i];
-            p[i]=t[i];
+            p[i]=z[i] + beta_global*p[i];
         }
         
 
@@ -387,69 +319,6 @@ void SolverCG::SolveParallel(double* b, double* x) {
 }
 
 /**
- * @brief Solve the linear system Ax = b using the Conjugate Gradient method without parallelism
- * @param in    Input array
- * @param out   Output array
-*/
-void SolverCG::Solve(double* b, double* x) {
-    unsigned int n = Nx*Ny;
-    int k;
-    double alpha;
-    double beta;
-    double eps;
-    double tol = 0.001;
-
-    eps = cblas_dnrm2(n, b, 1);
-    if (eps < tol*tol) {
-        std::fill(x, x+n, 0.0);
-        cout << "Norm is " << eps << endl;
-        return;
-    }
-
-    ApplyOperator(x, t);
-    cblas_dcopy(n, b, 1, r, 1);        // r_0 = b (i.e. b)
-    ImposeBC(r);
-
-    cblas_daxpy(n, -1.0, t, 1, r, 1);
-    Precondition(r, z);
-    cblas_dcopy(n, z, 1, p, 1);        // p_0 = r_0
-
-    k = 0;
-    do {
-        k++;
-        // Perform action of Nabla^2 * p
-        ApplyOperator(p, t);
-
-        alpha = cblas_ddot(n, t, 1, p, 1);  // alpha = p_k^T A p_k
-        alpha = cblas_ddot(n, r, 1, z, 1) / alpha; // compute alpha_k
-        beta  = cblas_ddot(n, r, 1, z, 1);  // z_k^T r_k
-
-        cblas_daxpy(n,  alpha, p, 1, x, 1);  // x_{k+1} = x_k + alpha_k p_k
-        cblas_daxpy(n, -alpha, t, 1, r, 1); // r_{k+1} = r_k - alpha_k A p_k
-
-        eps = cblas_dnrm2(n, r, 1);
-
-        if (eps < tol*tol) {
-            break;
-        }
-        Precondition(r, z);
-        beta = cblas_ddot(n, r, 1, z, 1) / beta;
-
-        cblas_dcopy(n, z, 1, t, 1);
-        cblas_daxpy(n, beta, p, 1, t, 1);
-        cblas_dcopy(n, t, 1, p, 1);
-
-    } while (k < 5000); // Set a maximum number of iterations
-
-    if (k == 5000) {
-        cout << "FAILED TO CONVERGE" << endl;
-        exit(-1);
-    }
-
-    cout << "Converged in " << k << " iterations. eps = " << eps << endl;
-}
-
-/**
  * @brief Apply the linear operator to the input array
  * @param in    Input array
  * @param out   Output array
@@ -457,14 +326,11 @@ void SolverCG::Solve(double* b, double* x) {
 void SolverCG::ApplyOperator(double* in, double* out) {
     double dx2i = 1.0/dx/dx;
     double dy2i = 1.0/dy/dy;
-    // int jm1 = 0, jp1 = 2;
     int j,Nj,k;
     #pragma omp parallel for private(j,Nj,k)
     for (j = 1; j < Ny - 1; ++j) {
         Nj = j*Nx;
         for (k = Nj+1; k < Nj+Nx-1; ++k) {
-        // for (i = 1; i < Nx-1; ++i) {
-        //     k = Nj+i;
             out[k] = ( -     in[k-1]
                               + 2.0*in[k]
                               -     in[k+1])*dx2i
@@ -473,49 +339,4 @@ void SolverCG::ApplyOperator(double* in, double* out) {
                               -     in[k+Nx])*dy2i;
         }
     }
-}
-
-/**
- * @brief Precondition the input array by dividing by the factor
- * @param in    Input array
- * @param out   Output array
-*/
-void SolverCG::Precondition(double* in, double* out) {
-    int i, j;
-    double dx2i = 1.0/dx/dx;
-    double dy2i = 1.0/dy/dy;
-    double factor = 2.0*(dx2i + dy2i);
-    for (i = 1; i < Nx - 1; ++i) {
-        for (j = 1; j < Ny - 1; ++j) {
-            out[IDX(i,j)] = in[IDX(i,j)]/factor; // OPTIMIZE by multiplying by 1/factor
-        }
-    }
-    // Boundaries
-    for (i = 0; i < Nx; ++i) {
-        out[IDX(i, 0)] = in[IDX(i,0)];
-        out[IDX(i, Ny-1)] = in[IDX(i, Ny-1)];
-    }
-
-    for (j = 0; j < Ny; ++j) {
-        out[IDX(0, j)] = in[IDX(0, j)];
-        out[IDX(Nx - 1, j)] = in[IDX(Nx - 1, j)];
-    }
-}
-
-/**
- * @brief Impose boundary conditions on the input array wihtout parallelism
- * @param inout     Input array
-*/
-void SolverCG::ImposeBC(double* inout) {
-        // Boundaries
-    for (int i = 0; i < Nx; ++i) {
-        inout[IDX(i, 0)] = 0.0;
-        inout[IDX(i, Ny-1)] = 0.0;
-    }
-
-    for (int j = 0; j < Ny; ++j) {
-        inout[IDX(0, j)] = 0.0;
-        inout[IDX(Nx - 1, j)] = 0.0;
-    }
-
 }

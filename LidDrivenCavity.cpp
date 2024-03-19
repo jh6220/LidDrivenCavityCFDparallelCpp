@@ -175,109 +175,19 @@ void LidDrivenCavity::Integrate()
     }
 }
 
-// /**
-//  * @brief Writes the solution into a file
-//  * @param file  name of the file to which the solution is written
-// */
-// void LidDrivenCavity::WriteSolution(std::string file)
-// {
-//     int Nx_write = Nx_local-2;
-//     int Ny_write = Ny_local-2;
-//     int i_start_write = 1;
-//     int i_end_write = Nx_local-2;
-//     int j_start_write = 1;
-//     int j_end_write = Ny_local-2;
-
-//     if (coords[0] == 0) {
-//         Nx_write = Nx_write + 1;
-//         i_start_write = 0;
-//     }
-//     if (coords[0] == world_size_root-1) {
-//         Nx_write = Nx_write + 1;
-//         i_end_write = Nx_local-1;
-//     }
-//     if (coords[1] == 0) {
-//         Ny_write = Ny_write + 1;
-//         j_start_write = 0;
-//     }
-//     if (coords[1] == world_size_root-1) {
-//         Ny_write = Ny_write + 1;
-//         j_end_write = Ny_local-1;
-//     }
-
-//     double* u0_write = new double[Nx_write*Ny_write]();
-//     double* u1_write = new double[Nx_write*Ny_write]();
-//     double* s_write = new double[Nx_write*Ny_write]();
-//     double* v_write = new double[Nx_write*Ny_write]();
-//     double* x_write = new double[Nx_write*Ny_write]();
-//     double* y_write = new double[Nx_write*Ny_write]();
-//     int i2,j2;
-//     // double* x_local = new double[]
-//     for (int i = 1; i < Nx_local-1; ++i) {
-//         i2 = i-i_start_write;
-//         for (int j = 1; j < Nx_local-1; ++j) {
-//             j2 = j-j_start_write;
-//             u0_write[IDX_write(i2,j2)] =  (s[IDX_local(i,j+1)] - s[IDX_local(i,j)]) / dy;
-//             u1_write[IDX_write(i2,j2)] = -(s[IDX_local(i+1,j)] - s[IDX_local(i,j)]) / dx;
-//         }
-//     }
-
-//     if (coords[1] == world_size_root-1) {   
-//         int JN = (Ny_write-1)*Nx_write;
-//         for (int i = 0; i < Nx_write; ++i) {
-//             u0[JN+i] = U;
-//         }
-//     }
-
-//     for (int i = 0; i < Nx_write; ++i) {
-//         i2 = i+i_start_write;
-//         ig = i2+i_start_global;
-//         for (int j = 0; j < Ny_write; ++j) {
-//             j2 = j+j_start_write;
-//             s_write[IDX_write(i,j)] = s[IDX_local(i2,j2)];
-//             v_write[IDX_write(i,j)] = v[IDX_local(i2,j2)];
-//             x_write[IDX_write(i,j)] = (ig) * dx;
-//             y_write[IDX_write(i,j)] = (j2+j_start_write) * dy;
-//         }
-//     }
-
-//     double* u0_global, *u1_global, *s_global, *v_global, *x_global, *y_global;
-//     if (world_rank == 0) {
-//         u0_global = new double[Nx*Ny]();
-//         u1_global = new double[Nx*Ny]();
-//         s_global = new double[Nx*Ny]();
-//         v_global = new double[Nx*Ny]();
-//         x_global = new double[Nx*Ny]();
-//         y_global = new double[Nx*Ny]();
-//     }
-//     MPI_Gather()
-
-//     std::ofstream f(file.c_str());
-//     std::cout << "Writing file " << file << std::endl;
-//     int k = 0;
-//     for (int i = 0; i < Nx_local; ++i)
-//     {
-//         for (int j = 0; j < Ny_local; ++j)
-//         {
-//             k = IDX_local(i, j);
-//             f << i * dx << " " << j * dy << " " << v[k] <<  " " << s[k] 
-//               << " " << u0[k] << " " << u1[k] << std::endl;
-//         }
-//         f << std::endl;
-//     }
-//     f.close();
-
-//     delete[] u0;
-//     delete[] u1;
-// }
-
 /**
- * @brief Writes the solution into a file
+ * @brief Writes the solution into a file.
  * @param file name of the file to which the solution is written
 */
-void LidDrivenCavity::WriteSolutionParallel(std::string file)
+void LidDrivenCavity::WriteSolution(std::string file)
 {
-    // Calculate the number of points to write and the start and end indices for the local MPI process computational domain
+    /**
+     * @brief Writes the solution to a file. The coordination between the processes is 
+     * achieved by gathering the lengths of the strings from all the processes and using them to 
+     * compute offests for the write operation.
+    */
+
+    /// Calculate the global indices of the local MPI process computational domain
     int Nx_write = Nx_local-2;
     int Ny_write = Ny_local-2;
     int i_start_write = 1;
@@ -302,7 +212,7 @@ void LidDrivenCavity::WriteSolutionParallel(std::string file)
         j_end_write = Ny_local-1;
     }
 
-    // Calculate the velocity components from the stream function
+    /// Calculates the velocity components from the stream function
     double* u0 = new double[Npts_local]();
     double* u1 = new double[Npts_local]();
     for (int i = 1; i < Nx_local - 1; ++i) {
@@ -323,7 +233,7 @@ void LidDrivenCavity::WriteSolutionParallel(std::string file)
         std::cout << "Writing file " << file << std::endl;
     }
     
-    // Write the solution on the local MPI process computational domain to a stringstream object
+    /// Write the solution on the local MPI process computational domain to a stringstream object
     stringstream ss;
     int k = 0;
     for (int i = i_start_write ; i < i_end_write+1; ++i)
@@ -338,7 +248,7 @@ void LidDrivenCavity::WriteSolutionParallel(std::string file)
         // ss << std::endl;
     }
 
-    // Gathers the lengths of the strings from all the processes and uses them to compute offests for the write operation
+    /// Gathers the lengths of the strings from all the processes and uses them to compute offests for the write operation
     string data = ss.str();
     int size = data.size();
     int all_sizes[world_size];
@@ -349,7 +259,7 @@ void LidDrivenCavity::WriteSolutionParallel(std::string file)
         offset += all_sizes[i];
     }
 
-    // Open the file, write the solution and close the file
+    /// Open the file, write the solution and close the file
     MPI_File fh;
     MPI_File_open(MPI_COMM_WORLD, file.c_str(), MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
     MPI_File_write_at_all(fh, offset, data.c_str(), size, MPI_CHAR, MPI_STATUS_IGNORE);
@@ -425,7 +335,7 @@ void LidDrivenCavity::UpdateDxDy()
 void LidDrivenCavity::UpdateDataWithParallelProcesses(double* data, int tag) {
 
     MPI_Request request_left, request_right, request_top, request_bottom;
-    // Collect boundary data to buffers and sent to neighbours
+    /// Collect boundary data to buffers and sent it to neighbours
     if (coords[0] != 0) {
         for (int j = 0; j < Ny_local; ++j) {
             dataB_left_sent[j] = data[IDX_local(1, j)];
@@ -451,7 +361,7 @@ void LidDrivenCavity::UpdateDataWithParallelProcesses(double* data, int tag) {
         MPI_Isend(dataB_bottom_sent, Nx_local, MPI_DOUBLE, coords[1]+1, tag, yCoordComm, &request_bottom);
     }
 
-    // Receive boundary data from neighbours
+    /// Receive boundary data from neighbours and write it to the solution array
     if (coords[0] != 0) {
         MPI_Recv(dataB_left_recv, Ny_local, MPI_DOUBLE, coords[0]-1, tag, xCoordComm, MPI_STATUS_IGNORE);
         for (int j = 0; j < Ny_local; ++j) {
@@ -479,7 +389,7 @@ void LidDrivenCavity::UpdateDataWithParallelProcesses(double* data, int tag) {
 }
 
 /**
- * @brief Advances the solution in time using the lid-driven cavity problem
+ * @brief Advances the solution in time by solving the vorticity-stream function formulation of the incompressible Navier-Stokes equations in 2D using the finite difference method
  * @param idxT  integer, time step index
 */
 void LidDrivenCavity::Advance(int idxT)
@@ -491,44 +401,8 @@ void LidDrivenCavity::Advance(int idxT)
     int i, j;
 
     int n_tags = 3;
-    
-    // Vorticity boundary conditions
-    // #pragma omp parallel
-    // {
-    //     #pragma omp single
-    //     {
-    //         if (coords[0] == 0) {
-    //             #pragma omp task
-    //             for (j = 1; j < Ny_local-1; ++j) {
-    //                 v[IDX_local(0,j)]    = 2.0 * dx2i * (s[IDX_local(0,j)]    - s[IDX_local(1,j)]);
-    //             }
-    //         }
 
-    //         if (coords[0] == world_size_root-1) {
-    //             #pragma omp task
-    //             for (j = 1; j < Ny_local-1; ++j) {
-    //                 v[IDX_local(Nx_local-1,j)] = 2.0 * dx2i * (s[IDX_local(Nx_local-1,j)] - s[IDX_local(Nx_local-2,j)]);
-    //             }
-    //         }
-
-    //         if (coords[1] == 0) {
-    //             #pragma omp task
-    //             for (i = 1; i < Nx_local-1; ++i) {
-    //                 v[IDX_local(i,0)]    = 2.0 * dy2i * (s[IDX_local(i,0)]    - s[IDX_local(i,1)]);
-    //             }
-    //         }
-
-    //         if (coords[1] == world_size_root-1) {
-    //             #pragma omp task
-    //             for (i = 1; i < Nx_local-1; ++i) {
-    //                 v[IDX_local(i,Ny_local-1)] = 2.0 * dy2i * (s[IDX_local(i,Ny_local-1)] - s[IDX_local(i,Ny_local-2)])
-    //                             - 2.0 * dyi*U;
-    //             }
-    //         }
-    //     }
-    //     #pragma omp taskwait // Ensure all tasks are completed
-    // }
-
+    /// Set the boundary condition for the local MPI process subdomain
     if (coords[0] == 0) {
         #pragma omp parallel for default(shared) private(j) schedule(static)
         for (j = 1; j < Ny_local-1; ++j) {
@@ -558,11 +432,11 @@ void LidDrivenCavity::Advance(int idxT)
         }
     }
 
-    //Exchange vorticity data with parallel processes
+    /// Exchange vorticity data with parallel processes
     UpdateDataWithParallelProcesses(v, n_tags*idxT+0);
 
     int Nj,k;
-
+    /// Update the interior vorticity
     #pragma omp parallel for private(j,k,Nj)
     for (j = 1; j < Ny_local - 1; ++j) {
         Nj = j*Nx_local;
@@ -574,10 +448,10 @@ void LidDrivenCavity::Advance(int idxT)
         }
     }
 
-    //Exchange vorticity data with parallel processes
+    /// Exchange vorticity data with parallel processes
     UpdateDataWithParallelProcesses(v, n_tags*idxT+1);
 
-    // Time advance vorticity
+    /// Time advance vorticity
     #pragma omp parallel for private(j,k,Nj)
     for (j = 1; j < Ny_local - 1; ++j) {
         Nj = j*Nx_local;
@@ -592,10 +466,9 @@ void LidDrivenCavity::Advance(int idxT)
         }
     }
 
+    /// Solve Poisson problem
+    cg->Solve(vnew, s);
 
-    // Solve Poisson problem
-    cg->SolveParallel(vnew, s);
-
-    //Exchange stream function data with parallel processes
+    /// Exchange stream function data with parallel processes
     UpdateDataWithParallelProcesses(s, n_tags*idxT+2);
 }

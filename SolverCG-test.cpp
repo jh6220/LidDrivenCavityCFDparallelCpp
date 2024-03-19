@@ -1,4 +1,6 @@
 #include <iostream>
+#include <mpi.h>
+#include <omp.h>
 #include "SolverCG.h"
 
 using namespace std;
@@ -8,75 +10,7 @@ using namespace std;
 
 #define IDX(I,J) ((J)*Nx + (I))
 
-void PrintMatrix(int Ny, int Nx, double* M) {
-    for (int i = 0; i < Nx; ++i) {
-        for (int j = 0; j < Ny; ++j) {
-            cout << M[j*Nx+i] << " ";
-        }
-        cout << endl;
-    }
-    cout << endl;
-}
-
 BOOST_AUTO_TEST_CASE(Solve) {
-    int Nx = 4;
-    int Ny = 4;
-    double dx = 0.1;
-    double dy = 0.1;
-    SolverCG* cg  = new SolverCG(Nx, Ny, dx, dy);
-    double w[] = {0,0,0,0,
-                0,1,2,0,
-                0,3,4,0,
-                0,0,0,0};
-    double* s = new double[Nx*Ny]();
-    cg->Solve(w, s);
-    double s_true[] = {0,0,0,0,
-                    0,0.00875, 0.01125,0,
-                    0,0.01375, 0.01625,0,
-                    0,0,0,0};
-
-    double tol = 0.0001;
-    
-    for (int i = 0; i < Nx*Ny; i++) 
-    {
-        BOOST_CHECK_CLOSE(s[i], s_true[i], tol);
-    }
-}
-
-BOOST_AUTO_TEST_CASE(Solve2) {
-
-    int Nx = 101;
-    int Ny = 101;
-    double dx = 1.0/(Nx-1);
-    double dy = 1.0/(Nx-1);
-    double* v = new double[Nx*Ny]();
-    double* s = new double[Nx*Ny]();
-    double* s_true = new double[Nx*Ny]();
-    SolverCG* cg  = new SolverCG(Nx, Ny, dx, dy);
-
-    double tol = 0.001;
-
-    const int k = 3;
-    const int l = 3;
-    for (int i = 0; i < Nx; ++i) {
-        for (int j = 0; j < Ny; ++j) {
-            v[IDX(i,j)] = -M_PI * M_PI * (k * k + l * l)
-                                       * sin(M_PI * k * i * dx)
-                                       * sin(M_PI * l * j * dy);
-            s_true[IDX(i,j)] = -sin(M_PI * k * i * dx) * sin(M_PI * l * j * dy);
-        }
-    }
-
-    cg->Solve(v, s);
-
-    for (int i = 0; i < Nx*Ny; i++) 
-    {
-        BOOST_CHECK_SMALL(s[i]-s_true[i], tol);
-    }   
-}
-
-
-BOOST_AUTO_TEST_CASE(SolveParallel) {
     MPI_Init(NULL, NULL);
 
     int world_size, world_rank, world_size_root;
@@ -93,8 +27,8 @@ BOOST_AUTO_TEST_CASE(SolveParallel) {
         MPI_Finalize();
         exit(-1);
     }
-    int Nx = 101;
-    int Ny = 101;
+    int Nx = 201;
+    int Ny = 201;
     double dx = 1.0/(Nx-1);
     double dy = 1.0/(Nx-1);
 
@@ -113,9 +47,9 @@ BOOST_AUTO_TEST_CASE(SolveParallel) {
     MPI_Comm_rank(mygrid, &mygrid_rank);
     MPI_Cart_coords(mygrid, mygrid_rank, 2, coords);
     keep[0] = 0;
-    keep[1] = 1; // keep rows in subgrid
+    keep[1] = 1;
     MPI_Cart_sub(mygrid, keep, &yCoordComm);
-    keep[0] = 1; // keep columns in subgrid
+    keep[0] = 1;
     keep[1] = 0;
     MPI_Cart_sub(mygrid, keep, &xCoordComm);
 
@@ -152,10 +86,9 @@ BOOST_AUTO_TEST_CASE(SolveParallel) {
         }
     }
 
-
     SolverCG* cg  = new SolverCG(Nx_local, Ny_local, dx, dy);
     cg->SetParallelParams(coords, world_size_root, xCoordComm, yCoordComm, world_rank);
-    cg->SolveParallel(v, s);
+    cg->Solve(v, s);
 
     for (int i = 1; i < Nx_local-1; i++) 
     {

@@ -1,0 +1,20 @@
+\chapter{Lid driven cavity flow solver documentation}
+\hypertarget{index}{}\label{index}\index{Lid driven cavity flow solver documentation@{Lid driven cavity flow solver documentation}}
+\hypertarget{index_makefile}{}\doxysection{\texorpdfstring{commands}{commands}}\label{index_makefile}
+you can compile and run the code with the following command\+: 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{make\ run\ }
+
+\end{DoxyCode}
+
+
+you can run the tests with the following command\+: 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{make\ run-\/tests\ }
+
+\end{DoxyCode}
+\hypertarget{index_Code}{}\doxysection{\texorpdfstring{structure}{structure}}\label{index_Code}
+The code is structured in 3 files\+:\hypertarget{index_LidDrivenCavitySolver}{}\doxysubsection{\texorpdfstring{Lid\+Driven\+Cavity\+Solver}{Lid\+Driven\+Cavity\+Solver}}\label{index_LidDrivenCavitySolver}
+This file contains the main function. It reads the input parameters and creates an instance of the \doxylink{classLidDrivenCavity}{Lid\+Driven\+Cavity} class. It then calls the Initialise and Integrate methods of the \doxylink{classLidDrivenCavity}{Lid\+Driven\+Cavity} class. It also writes the initial and final solutions to files.\hypertarget{index_LidDrivenCavity}{}\doxysubsection{\texorpdfstring{Lid\+Driven\+Cavity}{Lid\+Driven\+Cavity}}\label{index_LidDrivenCavity}
+This file contains the implementation of the \doxylink{classLidDrivenCavity}{Lid\+Driven\+Cavity} class. This objects stores the simulation parameters and the solution and has the methos initialise, integrate and write the solution to a file.\hypertarget{index_SolverCG}{}\doxysubsection{\texorpdfstring{Solver\+CG}{Solver\+CG}}\label{index_SolverCG}
+This file contains the implementation of the \doxylink{classSolverCG}{Solver\+CG} class. This class implements the Conjugate Gradient method to solve a linear system of equations. 

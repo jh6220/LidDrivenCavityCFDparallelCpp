@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['printconfiguration_0',['PrintConfiguration',['../classLidDrivenCavity.html#a8e111839958ac5d4d0d8d583a4d84e86',1,'LidDrivenCavity']]]
+  ['liddrivencavity_0',['LidDrivenCavity',['../classLidDrivenCavity.html#a497a8268ebbb541b0e591df04dbcc1df',1,'LidDrivenCavity']]]
 ];

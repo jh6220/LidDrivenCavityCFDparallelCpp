@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['writesolutionparallel_0',['WriteSolutionParallel',['../classLidDrivenCavity.html#a4255a37ee17a51e683e4f39fa43cb24d',1,'LidDrivenCavity']]]
+  ['initialise_0',['Initialise',['../classLidDrivenCavity.html#ab0eb448219134e835173e94874a3983a',1,'LidDrivenCavity']]],
+  ['integrate_1',['Integrate',['../classLidDrivenCavity.html#a80cd7032d10f09279d62d03335023e72',1,'LidDrivenCavity']]]
 ];

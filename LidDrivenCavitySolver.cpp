@@ -8,10 +8,45 @@ namespace po = boost::program_options;
 
 #include "LidDrivenCavity.h"
 
+/*! \mainpage Lid driven cavity flow solver documentation
+ *
+ * \section makefile commands
+ *
+ * you can compile and run the code with the following command:
+ * \code make run \endcode
+ * 
+ * you can run the tests with the following command:
+ * \code make run-tests \endcode
+ *
+ * \section Code structure
+ * 
+ * The code is structured in 3 files:
+ *
+ * \subsection LidDrivenCavitySolver 
+ * 
+ * This file contains the main function. It reads the input parameters and
+ * creates an instance of the LidDrivenCavity class. It then calls the
+ * Initialise and Integrate methods of the LidDrivenCavity class.
+ * It also writes the initial and final solutions to files.
+ *  
+ * \subsection LidDrivenCavity
+ * 
+ * This file contains the implementation of the LidDrivenCavity class. This
+ * objects stores the simulation parameters and the solution and has the methos
+ * initialise, integrate and write the solution to a file.
+ * 
+ * \subsection SolverCG
+ * 
+ * This file contains the implementation of the SolverCG class. This class
+ * implements the Conjugate Gradient method to solve a linear system of equations.
+ * 
+ */
+
 int main(int argc, char **argv)
 {
     MPI_Init(&argc, &argv);
 
+    /// Parse input
     po::options_description opts(
         "Solver for the 2D lid-driven cavity incompressible flow problem");
     opts.add_options()
@@ -42,7 +77,7 @@ int main(int argc, char **argv)
         return 0;
     }
 
-
+    /// Initialise the solver and set the simulation parameters
     LidDrivenCavity* solver = new LidDrivenCavity();
     solver->SetDomainSize(vm["Lx"].as<double>(), vm["Ly"].as<double>());
     solver->SetGridSize(vm["Nx"].as<int>(),vm["Ny"].as<int>());
@@ -54,11 +89,12 @@ int main(int argc, char **argv)
 
     solver->Initialise();
 
-    solver->WriteSolutionParallel("ic.txt");
+    solver->WriteSolution("ic.txt");
 
+    /// Run the simulation
     solver->Integrate();
 
-    solver->WriteSolutionParallel("final.txt");
+    solver->WriteSolution("final.txt");
 
     MPI_Finalize();
 	return 0;
