@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['solvercg_0',['SolverCG',['../class_solver_c_g.html',1,'']]]
+  ['solvercg_0',['SolverCG',['../classSolverCG.html',1,'']]]
 ];
