@@ -161,27 +161,32 @@ void SolverCG::ImposeBCParallel(double* inout) {
 */
 void SolverCG::UpdateDataWithParallelProcesses(double* data, int tag) {
     MPI_Request request_left, request_right, request_top, request_bottom;
+    int i,j;
     // Collect boundary data to buffers and sent to neighbours
     if (coords[0] != 0) {
-        for (int j = 0; j < Ny; ++j) {
+        // #pragma omp parallel for default(shared) private(j) schedule(static)
+        for (j = 0; j < Ny; ++j) {
             dataB_left_sent[j] = data[IDX(1, j)];
         }
         MPI_Isend(dataB_left_sent, Ny, MPI_DOUBLE, coords[0]-1, tag, xCoordComm, &request_left);
     }
     if (coords[0] != world_size_root-1) {
-        for (int j = 0; j < Ny; ++j) {
+        #pragma omp parallel for default(shared) private(j) schedule(static)
+        for (j = 0; j < Ny; ++j) {
             dataB_right_sent[j] = data[IDX(Nx-2, j)];
         }
         MPI_Isend(dataB_right_sent, Ny, MPI_DOUBLE, coords[0]+1, tag, xCoordComm, &request_right);
     }
     if (coords[1] != 0) {
-        for (int i = 0; i < Nx; ++i) {
+        // #pragma omp parallel for default(shared) private(i) schedule(static)
+        for (i = 0; i < Nx; ++i) {
             dataB_top_sent[i] = data[IDX(i,1)];
         }
         MPI_Isend(dataB_top_sent, Nx, MPI_DOUBLE, coords[1]-1, tag, yCoordComm, &request_top);
     }
     if (coords[1] != world_size_root-1) {
-        for (int i = 0; i < Nx; ++i) {
+        // #pragma omp parallel for default(shared) private(i) schedule(static)
+        for (i = 0; i < Nx; ++i) {
             dataB_bottom_sent[i] = data[IDX(i, Ny-2)];
         }
         MPI_Isend(dataB_bottom_sent, Nx, MPI_DOUBLE, coords[1]+1, tag, yCoordComm, &request_bottom);
@@ -190,25 +195,29 @@ void SolverCG::UpdateDataWithParallelProcesses(double* data, int tag) {
     // Receive boundary data from neighbours
     if (coords[0] != 0) {
         MPI_Recv(dataB_left_recv, Ny, MPI_DOUBLE, coords[0]-1, tag, xCoordComm, MPI_STATUS_IGNORE);
-        for (int j = 0; j < Ny; ++j) {
+        // #pragma omp parallel for default(shared) private(j) schedule(static)
+        for (j = 0; j < Ny; ++j) {
             data[IDX(0,j)] = dataB_left_recv[j];
         }
     }
     if (coords[0] != world_size_root-1) {
         MPI_Recv(dataB_right_recv, Ny, MPI_DOUBLE, coords[0]+1, tag, xCoordComm, MPI_STATUS_IGNORE);
-        for (int j = 0; j < Ny; ++j) {
+        // #pragma omp parallel for default(shared) private(j) schedule(static)
+        for (j = 0; j < Ny; ++j) {
             data[IDX(Nx-1,j)] = dataB_right_recv[j];
         }
     }
     if (coords[1] != 0) {
         MPI_Recv(dataB_top_recv, Nx, MPI_DOUBLE, coords[1]-1, tag, yCoordComm, MPI_STATUS_IGNORE);
-        for (int i = 0; i < Nx; ++i) {
+        // #pragma omp parallel for default(shared) private(i) schedule(static)
+        for (i = 0; i < Nx; ++i) {
             data[IDX(i,0)] = dataB_top_recv[i];
         }
     }
     if (coords[1] != world_size_root-1) {
         MPI_Recv(dataB_bottom_recv, Nx, MPI_DOUBLE, coords[1]+1, tag, yCoordComm, MPI_STATUS_IGNORE);
-        for (int i = 0; i < Nx; ++i) {
+        // #pragma omp parallel for default(shared) private(i) schedule(static)
+        for (i = 0; i < Nx; ++i) {
             data[IDX(i,Ny-1)] = dataB_bottom_recv[i];
         }
     }
@@ -231,11 +240,15 @@ void SolverCG::PrintMatrix(int Ny, int Nx, double* M) {
 */
 double SolverCG::CalculateEpsGlobalParallel(double* r) {
     eps = 0;
-    int j = 0;
+    int j,Nj,kk;
 
-    // #pragma omp parallel for private(j) reduction(+:eps)
+    #pragma omp parallel for private(j,Nj,kk) reduction(+:eps)
     for (j=1; j<Ny-1; j++) {
-        eps += cblas_ddot(Nx-2, r+j*Nx+1, 1, r+j*Nx+1, 1);
+        // eps += cblas_ddot(Nx-2, r+j*Nx+1, 1, r+j*Nx+1, 1);
+        Nj = j*Nx;
+        for (kk = Nj+1; kk < Nj+Nx-1; ++kk) {
+            eps = eps + r[kk]*r[kk];
+        }
     }
     MPI_Allreduce(&eps, &eps_global, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     eps_global = sqrt(eps_global);
@@ -311,9 +324,11 @@ void SolverCG::SolveParallel(double* b, double* x) {
                             + ( -     p[kk-Nx]
                                 + 2.0*p[kk]
                                 -     p[kk+Nx])*dy2i;
+                alpha_num = alpha_num + r[kk]*z[kk];
+                alpha_den = alpha_den + t[kk]*p[kk];
             }
-            alpha_num = alpha_num + cblas_ddot(Nx-2, r+Nj+1, 1, z+Nj+1, 1);
-            alpha_den = alpha_den + cblas_ddot(Nx-2, t+Nj+1, 1, p+Nj+1, 1);
+            // alpha_num = alpha_num + cblas_ddot(Nx-2, r+Nj+1, 1, z+Nj+1, 1);
+            // alpha_den = alpha_den + cblas_ddot(Nx-2, t+Nj+1, 1, p+Nj+1, 1);
         }
 
         MPI_Allreduce(&alpha_num, &alpha_num_global, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -325,12 +340,21 @@ void SolverCG::SolveParallel(double* b, double* x) {
         #pragma omp parallel for private(j,Nj) reduction(+:eps, beta)
         for (j = 1; j < Ny - 1; ++j) {
             Nj = j*Nx;
-            cblas_daxpy(Nx-2,  alpha_global, p+Nj+1, 1, x+Nj+1, 1);  // x_{k+1} = x_k + alpha_k p_k
-            cblas_daxpy(Nx-2, -alpha_global, t+Nj+1, 1, r+Nj+1, 1); // r_{k+1} = r_k - alpha_k A p_k
-            cblas_dcopy(Nx-2, r+Nj+1, 1, z+Nj+1, 1);
-            cblas_dscal(Nx-2, factor, z+Nj+1, 1);
-            beta = beta + cblas_ddot(Nx-2, r+Nj+1, 1, z+Nj+1, 1);
-            eps = eps + cblas_ddot(Nx-2, r+Nj+1, 1, r+Nj+1, 1);
+            // cblas_daxpy(Nx-2,  alpha_global, p+Nj+1, 1, x+Nj+1, 1);  // x_{k+1} = x_k + alpha_k p_k
+            // cblas_daxpy(Nx-2, -alpha_global, t+Nj+1, 1, r+Nj+1, 1); // r_{k+1} = r_k - alpha_k A p_k
+            // cblas_dcopy(Nx-2, r+Nj+1, 1, z+Nj+1, 1);
+            // cblas_dscal(Nx-2, factor, z+Nj+1, 1);
+            for (kk = Nj+1; kk < Nj+Nx-1; ++kk) {
+                x[kk] = x[kk] + alpha_global*p[kk];
+                r[kk] = r[kk] - alpha_global*t[kk];
+                z[kk] = r[kk]*factor;
+                beta = beta + r[kk]*z[kk];
+                eps = eps + r[kk]*r[kk];
+            }
+            // beta = beta + cblas_ddot(Nx-2, r+Nj+1, 1, z+Nj+1, 1);
+            // eps = eps + cblas_ddot(Nx-2, r+Nj+1, 1, r+Nj+1, 1);
+            // eps_temp = cblas_dnrm2(Nx-2, r+Nj+1, 1);
+            // eps = eps + eps_temp*eps_temp;
         }
         MPI_Allreduce(&eps, &eps_global, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         eps_global = sqrt(eps_global);

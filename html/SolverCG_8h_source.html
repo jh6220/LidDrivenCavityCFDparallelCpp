@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.9.4"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>LidDrivenCavity: SolverCG.h Source File</title>
+<title>Lid Dirven Cavity Flow: SolverCG.h Source File</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -21,8 +21,9 @@
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">LidDrivenCavity
+   <div id="projectname">Lid Dirven Cavity Flow
    </div>
+   <div id="projectbrief">C++ numerical simulation of the lid driven cavity flow optimized with MPI and OpenMP parallelism</div>
   </td>
  </tr>
  </tbody>
@@ -108,9 +109,9 @@ $(function() {
 <div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span>};</div>
 <div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span> </div>
 <div class="ttc" id="aclassSolverCG_html"><div class="ttname"><a href="classSolverCG.html">SolverCG</a></div><div class="ttdef"><b>Definition:</b> SolverCG.h:6</div></div>
-<div class="ttc" id="aclassSolverCG_html_a3008cda8602555ce886289a7ab6821dc"><div class="ttname"><a href="classSolverCG.html#a3008cda8602555ce886289a7ab6821dc">SolverCG::SolveParallel</a></div><div class="ttdeci">void SolveParallel(double *b, double *x)</div><div class="ttdoc">Solve the linear system Ax = b using the Conjugate Gradient method with MPI and OMP parallelism.</div><div class="ttdef"><b>Definition:</b> SolverCG.cpp:261</div></div>
+<div class="ttc" id="aclassSolverCG_html_a3008cda8602555ce886289a7ab6821dc"><div class="ttname"><a href="classSolverCG.html#a3008cda8602555ce886289a7ab6821dc">SolverCG::SolveParallel</a></div><div class="ttdeci">void SolveParallel(double *b, double *x)</div><div class="ttdoc">Solve the linear system Ax = b using the Conjugate Gradient method with MPI and OMP parallelism.</div><div class="ttdef"><b>Definition:</b> SolverCG.cpp:274</div></div>
 <div class="ttc" id="aclassSolverCG_html_a4217ed81ea568fe78d9cbd1d2534ef1e"><div class="ttname"><a href="classSolverCG.html#a4217ed81ea568fe78d9cbd1d2534ef1e">SolverCG::SetParallelParams</a></div><div class="ttdeci">void SetParallelParams(int *pcoords, int pworld_size_root, MPI_Comm pxCoordComm, MPI_Comm pyCoordComm, int pworld_rank)</div><div class="ttdoc">Set the parameters regarding MPI parallelism.</div><div class="ttdef"><b>Definition:</b> SolverCG.cpp:55</div></div>
-<div class="ttc" id="aclassSolverCG_html_a8cc7c4b2651399f9dc5b5ef2bdfeebf7"><div class="ttname"><a href="classSolverCG.html#a8cc7c4b2651399f9dc5b5ef2bdfeebf7">SolverCG::Solve</a></div><div class="ttdeci">void Solve(double *b, double *x)</div><div class="ttdoc">Solve the linear system Ax = b using the Conjugate Gradient method without parallelism.</div><div class="ttdef"><b>Definition:</b> SolverCG.cpp:370</div></div>
+<div class="ttc" id="aclassSolverCG_html_a8cc7c4b2651399f9dc5b5ef2bdfeebf7"><div class="ttname"><a href="classSolverCG.html#a8cc7c4b2651399f9dc5b5ef2bdfeebf7">SolverCG::Solve</a></div><div class="ttdeci">void Solve(double *b, double *x)</div><div class="ttdoc">Solve the linear system Ax = b using the Conjugate Gradient method without parallelism.</div><div class="ttdef"><b>Definition:</b> SolverCG.cpp:394</div></div>
 <div class="ttc" id="aclassSolverCG_html_a996c32d6fce0b553c981a6c1f86387e8"><div class="ttname"><a href="classSolverCG.html#a996c32d6fce0b553c981a6c1f86387e8">SolverCG::~SolverCG</a></div><div class="ttdeci">~SolverCG()</div><div class="ttdoc">Destroy the SolverCG::SolverCG object.</div><div class="ttdef"><b>Definition:</b> SolverCG.cpp:39</div></div>
 <div class="ttc" id="aclassSolverCG_html_af2e6b28644c4379d49bffb377c020345"><div class="ttname"><a href="classSolverCG.html#af2e6b28644c4379d49bffb377c020345">SolverCG::SolverCG</a></div><div class="ttdeci">SolverCG(int pNx, int pNy, double pdx, double pdy)</div><div class="ttdoc">Construct a new SolverCG::SolverCG object.</div><div class="ttdef"><b>Definition:</b> SolverCG.cpp:22</div></div>
 </div><!-- fragment --></div><!-- contents -->
