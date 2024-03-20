@@ -1,7 +1,7 @@
-CXX= OMPI_CXX=g++-10 mpicxx
-CXXFLAGS= -std=c++11 -Wall -O3 -g
-# CXX= mpicxx
-# CXXFLAGS= -std=c++11 -Wall -O3
+# CXX= OMPI_CXX=g++-10 mpicxx
+# CXXFLAGS= -std=c++11 -Wall -O3 -g
+CXX= mpicxx
+CXXFLAGS= -std=c++11 -Wall -O3
 
 # Include directories
 INCDIR=-I/opt/homebrew/Cellar/openblas/0.3.26/include -I/opt/homebrew/Cellar/boost/1.84.0_1/include
@@ -27,7 +27,7 @@ solver: LidDrivenCavitySolver.o LidDrivenCavity.o SolverCG.o
 	$(CXX) -fopenmp -o solver LidDrivenCavitySolver.o LidDrivenCavity.o SolverCG.o $(LIBDIR) $(LIBS)
 
 run: solver
-	OMP_NUM_THREADS=3 mpiexec -n 1 ./solver --Lx 1 --Ly 1 --Nx 201 --Ny 201 --Re 1000 --dt 0.005 --T 0.5
+	OMP_NUM_THREADS=1 mpiexec --bind-to none -n 1 ./solver --Lx 1 --Ly 1 --Nx 1001 --Ny 1001 --Re 1000 --dt 0.0001 --T 0.0005
 
 doc:
 	doxygen Doxyfile
